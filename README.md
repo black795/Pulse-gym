@@ -69,13 +69,13 @@ pulse-gym/
 │   │   │   ├── permisos.py      ★ ROLES Y PERMISOS: la única fuente de verdad
 │   │   │   └── security.py      Contraseñas cifradas (bcrypt) y tokens (JWT)
 │   │   ├── db/                  Conexión a la base de datos y datos iniciales
-│   │   ├── models/              Tablas: sedes, roles, estados_usuario, usuarios, historial_estado_usuario
+│   │   ├── models/              Tablas: sedes, roles, estados_usuario, usuarios, historial_estado_usuario, clientes
 │   │   ├── schemas/             Qué datos entran y salen de la API (y sus validaciones)
 │   │   ├── services/            Reglas de negocio (crear usuario, cambiar estado…)
 │   │   └── api/
 │   │       ├── deps.py          "Porteros": ¿quién eres? ¿tienes la llave?
-│   │       └── routes/          Endpoints: auth, usuarios, roles
-│   └── tests/                   22 pruebas automáticas
+│   │       └── routes/          Endpoints: auth, usuarios, roles, clientes
+│   └── tests/                   50 pruebas automáticas
 │
 └── frontend/                    ← Tu diseño (React + Vite + Tailwind)
     └── src/
@@ -131,6 +131,10 @@ En el backend, cada endpoint nuevo se protege así:
 | POST | `/api/usuarios` | Dueño | Agregar personal |
 | PATCH | `/api/usuarios/{id}/rol` | Dueño | Cambiar rol |
 | PATCH | `/api/usuarios/{id}/estado` | Dueño | Activar / desactivar / suspender |
+| GET | `/api/clientes?buscar=` | Dueño, recepción, entrenador | Listado de clientes (busca por nombre o carnet) |
+| GET | `/api/clientes/{id}` | Dueño, recepción, entrenador | Ficha de un cliente |
+| POST | `/api/clientes` | Dueño, recepción | Registrar ficha (el carnet no se puede repetir) |
+| PATCH | `/api/clientes/{id}` | Dueño, recepción | Editar ficha |
 
 ## Seguridad incluida
 
@@ -145,7 +149,7 @@ En el backend, cada endpoint nuevo se protege así:
 
 ```bash
 cd backend
-pytest -q          # 22 pruebas: login, registro, permisos por rol, cambios de estado
+pytest -q          # 50 pruebas: login, registro, permisos por rol, cambios de estado, ficha de cliente
 ```
 
 ## PostgreSQL (cuando lo necesites)
