@@ -1,4 +1,4 @@
-# Pulse Gym ·
+# Pulse Gym
 ## Qué incluye
 
 | | Qué hace |
