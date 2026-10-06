@@ -1,8 +1,8 @@
-# Pulse Gym · Sprint 1 — Login y roles
+# Pulse Gym
 
-Primer sprint del sistema: **iniciar sesión, registrarse y que cada rol vea solo lo que le corresponde.**
-El resto de pantallas de tu diseño ya están conectadas al login, pero todavía muestran datos de ejemplo
-(se irán conectando sprint por sprint).
+Sistema de gestión de gimnasio. Hoy permite **iniciar sesión, registrarse y que cada rol vea solo lo que le corresponde.**
+El resto de pantallas ya están conectadas al login, pero todavía muestran datos de ejemplo
+(se irán conectando poco a poco).
 
 ## Qué incluye
 
@@ -119,7 +119,7 @@ En el backend, cada endpoint nuevo se protege así:
 
 ---
 
-## API de este sprint
+## API
 
 | Método | Ruta | Quién | Para qué |
 |---|---|---|---|
@@ -162,7 +162,7 @@ Las tablas usan **los mismos nombres y columnas de tu script SQL** (`roles`, `us
 
 ---
 
-## Pendientes para próximos sprints
+## Pendientes
 
 - **Guardar el consentimiento**: hoy se exige al registrarse, pero tu esquema aún no tiene dónde guardarlo.
   Lo ideal es agregar `consentimiento_salud_at` en la tabla de clientes cuando hagamos ese módulo.
