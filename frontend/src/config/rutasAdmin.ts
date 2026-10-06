@@ -38,6 +38,7 @@ export const RUTAS_ADMIN: RutaAdmin[] = [
   { path: '', Component: Clients, permiso: PERMISOS.CLIENTES_VER, menu: { label: 'Clientes', icono: IconUsers, grupo: 'GESTIÓN' } },
   { path: 'clients/new', Component: NewClient, permiso: PERMISOS.CLIENTES_CREAR },
   { path: 'clients/:id', Component: ClientProfile, permiso: PERMISOS.CLIENTES_VER },
+  { path: 'clients/:id/edit', Component: NewClient, permiso: PERMISOS.CLIENTES_EDITAR },
   { path: 'memberships', Component: Memberships, permiso: PERMISOS.MEMBRESIAS_VER, menu: { label: 'Membresías', icono: IconCard, grupo: 'GESTIÓN' } },
   { path: 'payments', Component: Payments, permiso: PERMISOS.PAGOS_GESTIONAR, menu: { label: 'Pagos', icono: IconBanknote, grupo: 'GESTIÓN' } },
   { path: 'attendance', Component: Attendance, permiso: PERMISOS.ASISTENCIA_VER, menu: { label: 'Asistencia', icono: IconCheck, grupo: 'GESTIÓN' } },

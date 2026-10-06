@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, roles, usuarios
+from app.api.routes import auth, clientes, roles, usuarios
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.seed import sembrar_catalogos, sembrar_demo
@@ -43,6 +43,7 @@ async def manejar_error_negocio(_: Request, exc: ErrorNegocio):
 app.include_router(auth.router, prefix="/api")
 app.include_router(roles.router, prefix="/api")
 app.include_router(usuarios.router, prefix="/api")
+app.include_router(clientes.router, prefix="/api")
 
 
 @app.get("/api/health", tags=["Sistema"])
