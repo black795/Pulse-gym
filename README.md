@@ -1,9 +1,4 @@
-# Pulse Gym · Sprint 1 — Login y roles
-
-Primer sprint del sistema: **iniciar sesión, registrarse y que cada rol vea solo lo que le corresponde.**
-El resto de pantallas de tu diseño ya están conectadas al login, pero todavía muestran datos de ejemplo
-(se irán conectando sprint por sprint).
-
+# Pulse Gym ·
 ## Qué incluye
 
 | | Qué hace |
