@@ -1,4 +1,4 @@
-#FLUJO DE TRABAJO DEL EQUIPO — PULSE GYM
+# FLUJO DE TRABAJO DEL EQUIPO — PULSE GYM
 
 Para mantener el desarrollo organizado, cada integrante debe seguir el siguiente flujo de trabajo al implementar una o varias historias de usuario.
 
