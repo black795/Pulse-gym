@@ -1,3 +1,241 @@
+#FLUJO DE TRABAJO DEL EQUIPO — PULSE GYM
+
+Para mantener el desarrollo organizado, cada integrante debe seguir el siguiente flujo de trabajo al implementar una o varias historias de usuario.
+
+1. SELECCIONAR HISTORIAS EN TRELLO
+
+Antes de comenzar a programar, cada integrante debe seleccionar en Trello las historias de usuario que va a desarrollar.
+
+Una vez seleccionadas, las tarjetas deben moverse desde:
+
+Product Backlog / Por hacer → En proceso
+
+De esta forma, el equipo puede identificar qué historias están siendo trabajadas y evitar que dos personas implementen la misma funcionalidad al mismo tiempo.
+
+
+2. ACTUALIZAR LA RAMA develop
+
+Antes de crear una nueva rama, se debe asegurar que la rama local develop esté actualizada.
+
+Comandos:
+
+git checkout develop
+git pull origin develop
+
+La rama develop contiene la versión más reciente del proyecto sobre la cual se desarrollan las nuevas funcionalidades.
+
+
+3. CREAR UNA RAMA DE TRABAJO
+
+Cada conjunto de historias debe desarrollarse en una rama creada a partir de develop.
+
+Formato recomendado:
+
+feature/<historias>-<descripcion>
+
+Ejemplos:
+
+feature/S1-02-registro-clientes
+feature/S1-03-S1-05-lesiones
+feature/S1-06-validacion-lesiones
+
+Ejemplo de creación:
+
+git checkout -b feature/S1-02-registro-clientes
+
+No se debe desarrollar directamente sobre las ramas main o develop.
+
+
+4. IMPLEMENTAR LA HISTORIA
+
+Durante el desarrollo, realizar commits pequeños y descriptivos.
+
+Ejemplos:
+
+git commit -m "feat: agrega modelo de cliente"
+git commit -m "feat: agrega endpoint para registrar clientes"
+git commit -m "fix: corrige validacion de lesiones"
+
+Cuando sea posible, una historia debe implementarse de forma completa siguiendo el flujo:
+
+Frontend
+   ↓
+API REST
+   ↓
+Servicio / lógica de negocio
+   ↓
+ORM
+   ↓
+Base de datos
+
+
+5. SUBIR LA RAMA
+
+Al terminar el desarrollo:
+
+git push origin feature/S1-02-registro-clientes
+
+
+6. CREAR PULL REQUEST
+
+Cuando la historia esté terminada, se debe crear un Pull Request hacia la rama develop.
+
+El Pull Request debe incluir:
+
+- Historias de usuario implementadas.
+- Breve descripción de los cambios realizados.
+- Evidencia o capturas si corresponde.
+- Instrucciones especiales para probar la funcionalidad.
+- Cambios realizados en la base de datos, si existen.
+
+Ejemplo:
+
+Título:
+S1-02 — Registro de clientes
+
+Descripción:
+Implementa el registro de clientes desde frontend hasta base de datos.
+
+Incluye:
+- DTOs con Pydantic.
+- Modelo SQLAlchemy.
+- Endpoint POST /api/clientes.
+- Servicio de clientes.
+- Formulario de registro.
+- Validaciones.
+
+
+7. NOTIFICAR AL EQUIPO
+
+Después de crear el Pull Request, se debe enviar un mensaje al grupo del equipo notificando que está listo para revisión.
+
+Ejemplo:
+
+PR listo para revisión.
+
+Historia: S1-02 — Registro de clientes
+Rama: feature/S1-02-registro-clientes
+
+Cambios principales:
+- Modelo de cliente
+- DTOs
+- API REST
+- Formulario de registro
+
+PR: <enlace al Pull Request>
+
+Revisor: Lucas / Josué
+
+
+8. REVISIÓN DE CÓDIGO
+
+Los responsables principales de revisar los Pull Requests serán:
+
+- Lucas
+- Josué
+
+El revisor debe comprobar, entre otros puntos:
+
+- Que las historias solicitadas hayan sido implementadas.
+- Que el código sea comprensible y esté organizado.
+- Que no se hayan incluido archivos sensibles como .env.
+- Que la funcionalidad pueda ejecutarse correctamente.
+- Que no se rompan funcionalidades existentes.
+- Que los cambios de base de datos sean coherentes.
+- Que no existan conflictos con develop.
+
+Si existen observaciones, el desarrollador debe corregirlas en la misma rama y volver a subir los cambios.
+
+Comandos:
+
+git add .
+git commit -m "fix: corrige observaciones del pull request"
+git push
+
+El Pull Request se actualizará automáticamente.
+
+
+9. MERGE HACIA develop
+
+Cuando Lucas o Josué aprueben el Pull Request, se podrá realizar el merge hacia:
+
+develop
+
+No se debe hacer merge de un Pull Request propio sin revisión, salvo que el equipo lo acuerde previamente.
+
+
+10. FINALIZAR LA HISTORIA EN TRELLO
+
+Una vez que el Pull Request haya sido aprobado y mergeado, las historias correspondientes deben moverse en Trello a:
+
+En proceso → Terminado
+
+De esta forma Trello representa el estado real del código integrado al proyecto.
+
+
+RESUMEN DEL FLUJO
+
+Elegir historia en Trello
+          ↓
+Mover a "En proceso"
+          ↓
+Actualizar develop
+          ↓
+Crear rama feature/*
+          ↓
+Implementar historia
+          ↓
+Commits
+          ↓
+Push
+          ↓
+Pull Request → develop
+          ↓
+Notificar al equipo
+          ↓
+Revisión: Lucas / Josué
+          ↓
+Correcciones si existen
+          ↓
+Aprobación
+          ↓
+Merge a develop
+          ↓
+Mover historia a "Terminado"
+
+
+REGLAS IMPORTANTES
+
+- No desarrollar directamente en main.
+- No desarrollar directamente en develop.
+- Todo cambio funcional debe entrar mediante Pull Request.
+- Los Pull Requests deben apuntar a develop.
+- No hacer merge sin revisión.
+- Mantener Trello actualizado con el estado real de las historias.
+- No subir contraseñas, tokens, archivos .env ni otros secretos al repositorio.
+
+
+ESTRUCTURA DE RAMAS
+
+main
+ ↑
+develop
+ ↑
+feature/S1-02-registro-clientes
+feature/S1-03-lesiones
+feature/S1-04-maquinas
+
+main representa la versión estable del proyecto.
+develop representa la versión de integración del equipo.
+Las ramas feature/* se crean desde develop para implementar historias de usuario.
+
+
+
+
+
+
+
+
 # Pulse Gym
 
 Sistema de gestión de gimnasio. Hoy permite **iniciar sesión, registrarse y que cada rol vea solo lo que le corresponde.**
