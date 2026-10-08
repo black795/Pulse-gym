@@ -157,27 +157,6 @@ export const revenueData = [
   { month: 'Sep', amount: 5800 },
 ];
 
-export const kpis = {
-  activeClients: 5,
-  activeMembers: 4,
-  activeTrainers: 3,
-};
-
-export const recentActivity = [
-  { id: 1, text: 'Daniela Vargas registró ingreso', time: 'hace 2h', type: 'attendance' },
-  { id: 2, text: 'Nuevo pago: Fátima Delgado — Bs 400', time: 'hace 3h', type: 'payment' },
-  { id: 3, text: 'Rutina actualizada para Daniela Vargas', time: 'hace 5h', type: 'routine' },
-  { id: 4, text: 'Emerson Choque registró ingreso', time: 'hace 6h', type: 'attendance' },
-  { id: 5, text: 'Bruno Salazar — lesión lumbar registrada', time: 'hace 1d', type: 'injury' },
-];
-
-export const alerts = [
-  { id: 1, text: 'Bruno Salazar tiene lesión lumbar sin rutina ajustada', type: 'danger' },
-  { id: 2, text: 'Ronald Quispe — membresía vencida hace 18 días', type: 'danger' },
-  { id: 3, text: '2 membresías vencen en los próximos 7 días', type: 'warning' },
-  { id: 4, text: 'Extensión de cuádriceps en mantenimiento', type: 'warning' },
-];
-
 export const planBOptions = [
   { id: 1, label: 'Polea baja alternativa', description: 'Máquina similar disponible — Polea alta en agarre neutro', available: true, selected: true },
   { id: 2, label: 'Alternativa en calistenia', description: 'Remo invertido con barra — Sin equipamiento necesario', available: true, selected: false },

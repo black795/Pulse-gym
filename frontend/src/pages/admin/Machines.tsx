@@ -5,7 +5,7 @@ import { IconDumbbell, IconPlus } from '../../components/Icons';
 export default function Machines() {
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 24, margin: 0 }}>Máquinas</h1>
           <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4, marginBottom: 0 }}>Catálogo de equipamiento del gimnasio</p>
@@ -18,7 +18,7 @@ export default function Machines() {
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 18 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))', gap: 18 }}>
         {machines.map(machine => (
           <div key={machine.id} style={{
             background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14,

@@ -108,3 +108,42 @@ input:focus-visible, select:focus-visible, button:focus-visible {
 
 @keyframes pulse-latido { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.08); } }
 .pulse-latido { animation: pulse-latido 1.1s ease-in-out infinite; }
+
+/* ---------- Panel del personal adaptable a pantallas angostas ---------- */
+.admin-sidebar { position: sticky; }
+.admin-topbar { padding-inline: 24px; }
+.admin-main { padding: 28px; }
+.solo-movil { display: none; }
+.admin-velo { display: none; }
+
+/* Columnas que se acomodan solas: en una pantalla angosta pasan a una sola columna. */
+.cols-auto-sm { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); }
+.cols-auto-md { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); }
+.cols-auto-lg { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); }
+.cols-form-lateral { display: grid; grid-template-columns: minmax(0, 1fr) 320px; }
+.tabla-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 960px) {
+  .cols-form-lateral { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 900px) {
+  /* El menú lateral pasa a ser un cajón que entra desde la izquierda. */
+  .admin-sidebar {
+    position: fixed; left: 0; z-index: 200;
+    transform: translateX(-100%); transition: transform 0.2s ease; visibility: hidden;
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.3);
+  }
+  .admin-sidebar.abierto { transform: translateX(0); visibility: visible; }
+  .admin-velo { display: block; position: fixed; inset: 0; z-index: 150; background: rgba(10, 18, 13, 0.55); }
+  .solo-movil { display: inline-flex; align-items: center; justify-content: center; }
+  .admin-topbar { padding-inline: 12px; }
+  .admin-main { padding: 16px; }
+}
+
+@media (max-width: 560px) {
+  .topbar-nombre, .solo-escritorio { display: none; }
+  .admin-main h1 { font-size: 21px !important; }
+  /* iOS hace zoom al enfocar campos con letra menor a 16px */
+  .admin-main input, .admin-main select, .admin-main textarea { font-size: 16px !important; }
+}

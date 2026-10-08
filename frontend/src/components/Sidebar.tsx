@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router';
-import { IconPulse } from './Icons';
+import { IconPulse, IconX } from './Icons';
 import { GRUPOS_MENU, RUTAS_ADMIN, rutaCompleta, type RutaAdmin } from '../config/rutasAdmin';
 import { useAuth } from '../features/auth/AuthContext';
 import { ROLES_UI } from '../features/auth/permisos';
@@ -24,18 +24,21 @@ function ItemMenu({ ruta }: { ruta: RutaAdmin }) {
   );
 }
 
-export default function Sidebar() {
+export default function Sidebar({ abierto, alCerrar }: { abierto: boolean; alCerrar: () => void }) {
   const { usuario, tiene } = useAuth();
   // Solo se muestran las opciones para las que el rol tiene la llave.
   const visibles = RUTAS_ADMIN.filter(r => r.menu && tiene(r.permiso));
   const sinGrupo = visibles.filter(r => r.menu!.grupo === null);
 
   return (
-    <aside style={{
-      width: 264, minHeight: '100vh', background: 'var(--sidebar)', display: 'flex', flexDirection: 'column',
-      flexShrink: 0, position: 'sticky', top: 0, height: '100vh', overflowY: 'auto',
+    <aside id="menu-lateral" className={`admin-sidebar${abierto ? ' abierto' : ''}`} style={{
+      width: 264, background: 'var(--sidebar)', display: 'flex', flexDirection: 'column',
+      flexShrink: 0, top: 0, height: '100dvh', overflowY: 'auto',
     }}>
-      <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+      <div style={{ padding: '28px 24px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'relative' }}>
+        <button className="solo-movil" onClick={alCerrar} aria-label="Cerrar menú" style={{ position: 'absolute', top: 14, right: 12, background: 'none', border: 'none', color: '#8fad99', cursor: 'pointer', padding: 6 }}>
+          <IconX style={{ width: 20, height: 20 }} />
+        </button>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--neon)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <IconPulse style={{ color: 'var(--sidebar)', width: 20, height: 20, strokeWidth: 2.5 }} />

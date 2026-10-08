@@ -27,7 +27,7 @@ export default function Reports() {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 24, margin: 0 }}>Reportes</h1>
           <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4, marginBottom: 0 }}>Análisis de desempeño del gimnasio</p>
@@ -48,7 +48,7 @@ export default function Reports() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 170px), 1fr))', gap: 16, marginBottom: 28 }}>
         {[
           { label: 'Ingresos', value: 'Bs 5,800' },
           { label: 'Clientes activos', value: '5' },
@@ -62,7 +62,7 @@ export default function Reports() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 320px), 1fr))', gap: 20, marginBottom: 20 }}>
         {/* Revenue chart */}
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 22, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
           <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 16, marginBottom: 20 }}>Ingresos — últimos 6 meses</div>
@@ -108,16 +108,16 @@ export default function Reports() {
           Ocupación por horario
           <span style={{ marginLeft: 10, background: 'var(--sidebar)', color: 'var(--neon)', fontSize: 11, fontWeight: 800, padding: '2px 10px', borderRadius: 999 }}>PICO: 6–8pm</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 12, height: 120 }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'clamp(4px, 1.5vw, 12px)', height: 130 }}>
           {hourlyData.map(d => (
-            <div key={d.hour} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+            <div key={d.hour} style={{ flex: 1, minWidth: 0, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
               <div style={{
                 width: '100%', borderRadius: '5px 5px 0 0',
-                height: `${d.pct}%`,
+                height: d.pct * 0.9, // en píxeles: un porcentaje no funciona dentro de una columna de alto automático
                 background: d.peak ? 'var(--sidebar)' : 'var(--primary-tint)',
                 border: `1px solid ${d.peak ? 'rgba(182,255,69,0.4)' : '#bbf7d0'}`,
               }} />
-              <div style={{ fontSize: 10.5, color: d.peak ? 'var(--primary-dark)' : 'var(--muted)', fontWeight: d.peak ? 800 : 600, whiteSpace: 'nowrap' }}>{d.hour}</div>
+              <div style={{ fontSize: 10.5, color: d.peak ? 'var(--primary-dark)' : 'var(--muted)', fontWeight: d.peak ? 800 : 600, textAlign: 'center', lineHeight: 1.15, minHeight: 24 }}>{d.hour}</div>
             </div>
           ))}
         </div>

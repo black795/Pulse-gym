@@ -33,7 +33,7 @@ export default function Measurements() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 28 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 16, marginBottom: 28 }}>
         {puedeLesiones && <div style={{ background: 'var(--danger-tint)', border: '1px solid #fecaca', borderRadius: 14, padding: '18px 20px' }}>
           <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 28, color: 'var(--danger)' }}>{cargando || error ? '—' : injuries.length}</div>
           <div style={{ fontSize: 13, color: '#991b1b', marginTop: 4, fontWeight: 600 }}>Lesiones activas</div>
@@ -54,7 +54,7 @@ export default function Measurements() {
           <IconAlertTriangle style={{ color: 'var(--danger)', width: 18, height: 18 }} />
           <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 15, color: 'var(--danger)' }}>Lesiones activas</div>
         </div>
-        {cargando ? <p role="status" style={{ padding: 20 }}>Cargando lesiones…</p> : error ? <div role="alert" style={{ padding: 20, color: 'var(--danger)' }}>{error} <button onClick={() => setRecarga(r => r + 1)}>Reintentar</button></div> : injuries.length === 0 ? <p style={{ padding: 20 }}>No hay lesiones ni limitaciones activas.</p> : <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        {cargando ? <p role="status" style={{ padding: 20 }}>Cargando lesiones…</p> : error ? <div role="alert" style={{ padding: 20, color: 'var(--danger)' }}>{error} <button onClick={() => setRecarga(r => r + 1)}>Reintentar</button></div> : injuries.length === 0 ? <p style={{ padding: 20 }}>No hay lesiones ni limitaciones activas.</p> : <div className="tabla-scroll"><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               {['CLIENTE', 'LESIÓN / LIMITACIÓN', 'REGISTRO', 'ÚLTIMO CAMBIO', 'RESPONSABLE DEL CAMBIO'].map(h => (
@@ -80,7 +80,7 @@ export default function Measurements() {
               );
             })}
           </tbody>
-        </table>}
+        </table></div>}
       </div>}
 
       {/* Measurements */}
@@ -88,7 +88,7 @@ export default function Measurements() {
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 15 }}>Últimas mediciones de peso</div>
         </div>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="tabla-scroll"><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               {['CLIENTE', 'PESO ACTUAL', 'CAMBIO', 'FECHA'].map(h => (
@@ -122,7 +122,7 @@ export default function Measurements() {
               );
             })}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );

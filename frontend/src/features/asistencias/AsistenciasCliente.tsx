@@ -27,7 +27,7 @@ export default function AsistenciasCliente({ clienteId }: { clienteId: number })
         Historial de asistencia · {entradas.length} {entradas.length === 1 ? 'entrada' : 'entradas'}
       </div>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               {['FECHA', 'HORA', 'MÉTODO', 'REGISTRÓ'].map(h => (
