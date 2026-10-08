@@ -1,9 +1,12 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../features/auth/AuthContext';
 import { primerNombre } from '../../features/auth/permisos';
 import { clients } from '../../data/mock';
 import { IconZap } from '../../components/Icons';
 import Avatar from '../../components/Avatar';
+import { fechaLegible } from '../../features/clientes/clientesApi';
+import { membresiasApi, type Membresia } from '../../features/membresias/membresiasApi';
 
 const daniela = clients[0];
 const days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -12,6 +15,13 @@ const completed = [0, 1, 2]; // Mon, Tue, Wed done
 export default function MobileHome() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
+  const [membresia, setMembresia] = useState<Membresia | null>(null);
+
+  useEffect(() => {
+    membresiasApi.mia().then(setMembresia).catch(() => setMembresia(null)); // si falla, la tarjeta simplemente no se muestra
+  }, []);
+
+  const color = membresia?.estado === 'vencida' ? 'var(--danger)' : membresia?.estado === 'por_vencer' ? 'var(--warning)' : 'var(--primary)';
 
   return (
     <div style={{ background: '#fff', minHeight: '100%' }}>
@@ -79,6 +89,31 @@ export default function MobileHome() {
             </div>
           ))}
         </div>
+
+        {/* Membresía: días restantes */}
+        {membresia && (
+          <div role="status" style={{
+            background: 'var(--bg)', borderRadius: 14, padding: '14px 16px', marginBottom: 20,
+            border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          }}>
+            <div>
+              <div style={{ fontSize: 11.5, color: 'var(--muted)', fontWeight: 700 }}>MEMBRESÍA {membresia.plan.toUpperCase()}</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)', marginTop: 2 }}>
+                {membresia.dias_restantes >= 0 ? 'Vence el' : 'Venció el'} {fechaLegible(membresia.fecha_vencimiento)}
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              {membresia.dias_restantes >= 0 ? (
+                <>
+                  <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 24, color, lineHeight: 1 }}>{membresia.dias_restantes}</div>
+                  <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: 2 }}>{membresia.dias_restantes === 1 ? 'día restante' : 'días restantes'}</div>
+                </>
+              ) : (
+                <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 14, color }}>Membresía vencida</div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* AI trainer card */}
         <div onClick={() => navigate('/mobile/ai')} style={{

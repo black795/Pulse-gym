@@ -410,7 +410,8 @@ En el backend, cada endpoint nuevo se protege así:
 | PATCH | `/api/clientes/{id}` | Dueño, recepción | Editar ficha |
 | GET | `/api/planes` | Dueño, recepción | Planes con su duración y precio |
 | GET | `/api/membresias?estado=` | Dueño, recepción | Membresía actual de cada cliente; `estado=por_vencer` o `vencida` |
-| POST | `/api/membresias` | Dueño, recepción | Registrar pago de un plan (el vencimiento se calcula solo) |
+| POST | `/api/membresias` | Dueño, recepción | Registrar pago de un plan. Si el cliente renueva antes de vencer, el plan nuevo empieza al terminar el actual (no pierde días) |
+| GET | `/api/membresias/mia` | Cliente | Su plan, vencimiento y días restantes (`null` si aún no paga) |
 
 ## Seguridad incluida
 

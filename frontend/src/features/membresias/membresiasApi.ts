@@ -26,6 +26,8 @@ export interface Membresia {
 
 export const membresiasApi = {
   planes: () => api<Plan[]>('/planes'),
+  /** Para la app del cliente: su membresía actual (null si aún no paga). */
+  mia: () => api<Membresia | null>('/membresias/mia'),
   listar: (estado?: EstadoMembresia) => api<Membresia[]>(`/membresias${estado ? `?estado=${estado}` : ''}`),
   registrarPago: (datos: { cliente_id: number; plan_id: number; fecha_pago?: string }) =>
     api<Membresia>('/membresias', { method: 'POST', body: datos }),

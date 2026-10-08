@@ -2,7 +2,7 @@
 import calendar
 from datetime import date, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.tiempo import hoy as hoy_local
@@ -23,6 +23,18 @@ def sumar_meses(inicio: date, meses: int) -> date:
 def calcular_vencimiento(fecha_inicio: date, duracion_meses: int) -> date:
     """Último día con acceso: pagar el 01 sep un plan mensual vence el 30 sep."""
     return sumar_meses(fecha_inicio, duracion_meses) - timedelta(days=1)
+
+
+def calcular_inicio(fecha_pago: date, vencimiento_actual: date | None) -> date:
+    """Renovar antes de vencer no hace perder días: el plan nuevo empieza al terminar el que tiene.
+    Si ya venció (o nunca pagó), empieza el día del pago."""
+    if vencimiento_actual is None:
+        return fecha_pago
+    return max(fecha_pago, vencimiento_actual + timedelta(days=1))
+
+
+def ultimo_vencimiento(db: Session, cliente_id: int) -> date | None:
+    return db.scalar(select(func.max(Membresia.fecha_vencimiento)).where(Membresia.cliente_id == cliente_id))
 
 
 def calcular_estado(vencimiento: date, hoy: date | None = None) -> EstadoMembresia:
@@ -55,9 +67,10 @@ def registrar(db: Session, datos: MembresiaIn, actor: Usuario | None = None) -> 
         raise ErrorNegocio("Plan no encontrado.", 404)
 
     pago = datos.fecha_pago or hoy_local()
+    inicio = calcular_inicio(pago, ultimo_vencimiento(db, cliente.id))
     membresia = Membresia(
-        cliente_id=cliente.id, plan_id=plan.id, fecha_pago=pago, fecha_inicio=pago,
-        fecha_vencimiento=calcular_vencimiento(pago, plan.duracion_meses),
+        cliente_id=cliente.id, plan_id=plan.id, fecha_pago=pago, fecha_inicio=inicio,
+        fecha_vencimiento=calcular_vencimiento(inicio, plan.duracion_meses),
         registrado_por=actor.id if actor else None,
     )
     db.add(membresia)
@@ -91,3 +104,12 @@ def listar(
 
     salida = [a_membresia_out(m, c, p, hoy) for m, c, p in filas]
     return [m for m in salida if estado is None or m.estado == estado]
+
+
+def de_usuario(db: Session, usuario: Usuario) -> MembresiaOut | None:
+    """La membresía actual del cliente que inició sesión (su ficha se une por el correo)."""
+    cliente = db.scalar(select(Cliente).where(func.lower(Cliente.email) == usuario.email.lower()))
+    if cliente is None:
+        return None
+    historial = listar(db, cliente_id=cliente.id)  # ordenado por vencimiento: la última es la que cuenta
+    return historial[-1] if historial else None

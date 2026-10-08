@@ -190,3 +190,71 @@ def test_vencimiento_en_ano_bisiesto():
     assert calcular_vencimiento(date(2024, 1, 31), 1) == date(2024, 2, 28)  # 29 feb - 1 día
     assert calcular_vencimiento(date(2024, 1, 30), 1) == date(2024, 2, 28)
     assert calcular_vencimiento(date(2023, 12, 31), 1) == date(2024, 1, 30)
+
+
+# ---- Renovación: no se pierden los días que le quedaban ----
+
+def test_renovar_antes_de_vencer_suma_los_dias_que_le_quedaban(client, entrar):
+    h = entrar(RECEPCION)
+    c = cliente_nuevo(client, h)
+    primera = pagar(client, h, c, "Mensual", date.today() - timedelta(days=26)).json()  # vence en 4 días
+    segunda = pagar(client, h, c, "Mensual").json()  # renueva hoy, antes de vencer
+    assert segunda["fecha_pago"] == date.today().isoformat()
+    assert segunda["fecha_inicio"] == (date.fromisoformat(primera["fecha_vencimiento"]) + timedelta(days=1)).isoformat()
+    assert segunda["fecha_vencimiento"] == calcular_vencimiento(date.fromisoformat(segunda["fecha_inicio"]), 1).isoformat()
+    assert segunda["dias_restantes"] > primera["dias_restantes"] + 27
+
+
+def test_renovar_el_mismo_dia_del_vencimiento_empieza_manana(client, entrar):
+    h = entrar(RECEPCION)
+    c = cliente_nuevo(client, h)
+    # un pago de hace 27 a 31 días cuyo último día de acceso es justo hoy
+    pago = next((date.today() - timedelta(days=d) for d in range(27, 32)
+                 if calcular_vencimiento(date.today() - timedelta(days=d), 1) == date.today()), None)
+    if pago is None:
+        pytest.skip("hoy no puede ser el último día de un plan mensual (fin de mes corto)")
+    primera = pagar(client, h, c, "Mensual", pago).json()
+    assert primera["dias_restantes"] == 0  # hoy es su último día
+    assert pagar(client, h, c, "Mensual").json()["fecha_inicio"] == (date.today() + timedelta(days=1)).isoformat()
+
+
+def test_renovar_una_vencida_empieza_el_dia_del_pago(client, entrar):
+    h = entrar(RECEPCION)
+    c = cliente_nuevo(client, h)
+    pagar(client, h, c, "Mensual", date.today() - timedelta(days=90))
+    nueva = pagar(client, h, c, "Mensual").json()
+    assert nueva["fecha_inicio"] == date.today().isoformat() and nueva["estado"] == "vigente"
+
+
+def test_renovaciones_seguidas_se_encadenan_y_el_pago_nuevo_nunca_queda_oculto(client, entrar):
+    h = entrar(RECEPCION)
+    c = cliente_nuevo(client, h)
+    pagar(client, h, c, "Semestral")
+    corta = pagar(client, h, c, "Mensual").json()  # menor que la vigente, pero se suma al final
+    actual = [m for m in client.get("/api/membresias", headers=h).json() if m["cliente_id"] == c]
+    assert len(actual) == 1 and actual[0]["id"] == corta["id"]
+    historial = client.get("/api/membresias", headers=h, params={"cliente_id": c}).json()
+    for anterior, siguiente in zip(historial, historial[1:]):
+        assert siguiente["fecha_inicio"] == (date.fromisoformat(anterior["fecha_vencimiento"]) + timedelta(days=1)).isoformat()
+
+
+# ---- Días restantes en la app del cliente ----
+
+def test_el_cliente_ve_su_membresia_y_sus_dias_restantes(client, entrar):
+    m = client.get("/api/membresias/mia", headers=entrar(CLIENTE)).json()
+    assert m["cliente_nombre"] == "Daniela Vargas" and m["plan"] == "Trimestral"
+    assert m["estado"] == "vigente" and m["dias_restantes"] > 60
+
+
+def test_cliente_sin_pagos_recibe_null(client, entrar):
+    client.post("/api/auth/registro", json={
+        "nombre": "Nuevo Cliente", "email": "nuevo@correo.com", "password": "Pulse2026!", "acepta_consentimiento": True,
+    })
+    r = client.get("/api/membresias/mia", headers=entrar("nuevo@correo.com"))
+    assert r.status_code == 200 and r.json() is None
+
+
+def test_solo_el_cliente_usa_mia(client, entrar):
+    for personal in (ADMIN, RECEPCION, ENTRENADOR):
+        assert client.get("/api/membresias/mia", headers=entrar(personal)).status_code == 403
+    assert client.get("/api/membresias/mia").status_code == 401
