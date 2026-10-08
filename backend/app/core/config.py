@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     access_token_minutos: int = 60
     bcrypt_rounds: int = 12  # costo del hash; más alto = más seguro y más lento
     cors_origins: str = "http://localhost:5173"
+    zona_horaria: str = "America/La_Paz"  # decide qué día es "hoy" para vencimientos
     seed_demo: bool = True
     demo_password: str = "Pulse2026!"
 

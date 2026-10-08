@@ -3,6 +3,10 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from app.core.tiempo import hoy
+
+DIAS_ATRAS_MAXIMO = 366  # un error de tipeo (ej. 2002) no debe crear una membresía vencida hace años
+
 EstadoMembresia = Literal["vigente", "por_vencer", "vencida"]
 
 
@@ -25,8 +29,10 @@ class MembresiaIn(BaseModel):
     @field_validator("fecha_pago")
     @classmethod
     def _no_futura(cls, v: date | None) -> date | None:
-        if v is not None and v > date.today():
+        if v is not None and v > hoy():
             raise ValueError("La fecha de pago no puede ser futura.")
+        if v is not None and (hoy() - v).days > DIAS_ATRAS_MAXIMO:
+            raise ValueError("La fecha de pago es demasiado antigua: revisa el año.")
         return v
 
 

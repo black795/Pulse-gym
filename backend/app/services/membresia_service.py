@@ -5,6 +5,7 @@ from datetime import date, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.tiempo import hoy as hoy_local
 from app.models import Cliente, Membresia, Plan, Usuario
 from app.schemas.membresia import EstadoMembresia, MembresiaIn, MembresiaOut
 from app.services.errores import ErrorNegocio
@@ -25,14 +26,14 @@ def calcular_vencimiento(fecha_inicio: date, duracion_meses: int) -> date:
 
 
 def calcular_estado(vencimiento: date, hoy: date | None = None) -> EstadoMembresia:
-    dias = (vencimiento - (hoy or date.today())).days
+    dias = (vencimiento - (hoy or hoy_local())).days
     if dias < 0:
         return "vencida"
     return "por_vencer" if dias <= DIAS_AVISO else "vigente"
 
 
 def a_membresia_out(m: Membresia, cliente: Cliente, plan: Plan, hoy: date | None = None) -> MembresiaOut:
-    hoy = hoy or date.today()
+    hoy = hoy or hoy_local()
     return MembresiaOut(
         id=m.id, cliente_id=cliente.id, cliente_nombre=cliente.nombre, cliente_carnet=cliente.carnet,
         plan_id=plan.id, plan=plan.nombre, duracion_meses=plan.duracion_meses,
@@ -53,7 +54,7 @@ def registrar(db: Session, datos: MembresiaIn, actor: Usuario | None = None) -> 
     if plan is None:
         raise ErrorNegocio("Plan no encontrado.", 404)
 
-    pago = datos.fecha_pago or date.today()
+    pago = datos.fecha_pago or hoy_local()
     membresia = Membresia(
         cliente_id=cliente.id, plan_id=plan.id, fecha_pago=pago, fecha_inicio=pago,
         fecha_vencimiento=calcular_vencimiento(pago, plan.duracion_meses),
@@ -71,7 +72,7 @@ def listar(
 ) -> list[MembresiaOut]:
     """Sin `cliente_id`: la membresía más reciente de cada cliente (la que cuenta hoy).
     Con `cliente_id`: todo su historial de pagos."""
-    hoy = hoy or date.today()
+    hoy = hoy or hoy_local()
     consulta = (
         select(Membresia, Cliente, Plan)
         .join(Cliente, Cliente.id == Membresia.cliente_id)

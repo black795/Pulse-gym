@@ -1,11 +1,12 @@
 """Datos iniciales. Es seguro ejecutarlo muchas veces: solo crea lo que falta."""
+from datetime import timedelta
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.permisos import ADMINISTRADOR, CLIENTE, DESCRIPCION_ROL, ENTRENADOR, RECEPCIONISTA, TODOS_LOS_ROLES
-from datetime import date, timedelta
-
+from app.core.tiempo import hoy as hoy_local
 from app.models import EstadoUsuario, Membresia, Plan, Rol, Sede, Usuario
 from app.schemas.cliente import ClienteIn
 from app.schemas.membresia import MembresiaIn
@@ -70,7 +71,7 @@ def sembrar_demo(db: Session) -> None:
 
     # Un pago por cliente con fechas relativas a hoy, para ver los tres estados (vigente, por vencer, vencida)
     if db.query(Membresia).count() == 0:
-        hoy = date.today()
+        hoy = hoy_local()
         pagos = [("7012345 LP", "Trimestral", hoy - timedelta(days=10)),
                  ("7112345 LP", "Mensual", hoy - timedelta(days=26)),
                  ("7223456 CB", "Mensual", hoy - timedelta(days=45))]

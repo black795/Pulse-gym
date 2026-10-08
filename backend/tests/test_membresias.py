@@ -161,3 +161,32 @@ def test_catalogo_de_planes(client, entrar):
     assert [(p["nombre"], p["duracion_meses"], p["precio"]) for p in planes] == [
         ("Mensual", 1, 150), ("Trimestral", 3, 400), ("Semestral", 6, 700),
     ]
+
+
+# ---- Revisión: "hoy" según la zona del gimnasio, fechas absurdas y año bisiesto ----
+
+def test_hoy_usa_la_zona_horaria_del_gimnasio(monkeypatch):
+    from datetime import datetime, timezone
+
+    from app.core import tiempo
+
+    class Falso(datetime):
+        @classmethod
+        def now(cls, tz=None):  # 02:30 UTC del 9 oct = 22:30 del 8 oct en La Paz (UTC-4)
+            return datetime(2026, 10, 9, 2, 30, tzinfo=timezone.utc).astimezone(tz)
+
+    monkeypatch.setattr(tiempo, "datetime", Falso)
+    assert tiempo.hoy() == date(2026, 10, 8)
+
+
+def test_rechaza_fecha_de_pago_muy_antigua(client, entrar):
+    h = entrar(RECEPCION)
+    c = cliente_nuevo(client, h)
+    assert pagar(client, h, c, "Mensual", date(2002, 3, 1)).status_code == 422
+    assert pagar(client, h, c, "Mensual", date.today() - timedelta(days=366)).status_code == 201
+
+
+def test_vencimiento_en_ano_bisiesto():
+    assert calcular_vencimiento(date(2024, 1, 31), 1) == date(2024, 2, 28)  # 29 feb - 1 día
+    assert calcular_vencimiento(date(2024, 1, 30), 1) == date(2024, 2, 28)
+    assert calcular_vencimiento(date(2023, 12, 31), 1) == date(2024, 1, 30)

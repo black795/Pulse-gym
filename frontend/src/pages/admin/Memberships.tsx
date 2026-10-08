@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Badge from '../../components/Badge';
 import { useAuth } from '../../features/auth/AuthContext';
 import { PERMISOS, tienePermiso } from '../../features/auth/permisos';
@@ -45,11 +45,25 @@ export default function Memberships() {
   const [guardando, setGuardando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
 
-  const cargar = (estado: EstadoMembresia | undefined) =>
-    membresiasApi.listar(estado)
-      .then(setFilas)
-      .catch(err => setError((err as Error).message))
-      .finally(() => setCargando(false));
+  // Si el usuario cambia de filtro rápido, solo cuenta la última petición (las viejas se descartan).
+  const ultimaPeticion = useRef(0);
+
+  const cargar = async (estado: EstadoMembresia | undefined) => {
+    const numero = ++ultimaPeticion.current;
+    setCargando(true);
+    try {
+      const resultado = await membresiasApi.listar(estado);
+      if (numero !== ultimaPeticion.current) return;
+      setFilas(resultado);
+      setError(null);
+    } catch (err) {
+      if (numero !== ultimaPeticion.current) return;
+      setFilas([]);
+      setError((err as Error).message);
+    } finally {
+      if (numero === ultimaPeticion.current) setCargando(false);
+    }
+  };
 
   useEffect(() => {
     membresiasApi.planes().then(setPlanes).catch(err => setError((err as Error).message));
@@ -174,7 +188,7 @@ export default function Memberships() {
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
         <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 16 }}>Vencimientos</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div role="group" aria-label="Filtrar por estado" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {FILTROS.map(f => (
               <button key={f.texto} onClick={() => setFiltro(f.valor)} aria-pressed={filtro === f.valor} style={{
                 padding: '6px 14px', borderRadius: 999, cursor: 'pointer', fontSize: 12.5, fontWeight: 700,
@@ -210,13 +224,13 @@ export default function Memberships() {
                   <td style={{ padding: '12px 16px' }}><Badge variant={VARIANTE[row.estado]}>{ETIQUETA_ESTADO[row.estado]}</Badge></td>
                 </tr>
               ))}
-              {!cargando && filas.length === 0 && (
+              {!cargando && !error && filas.length === 0 && (
                 <tr><td colSpan={5} style={{ padding: 28, textAlign: 'center', color: 'var(--muted)', fontSize: 14 }}>No hay membresías en este estado.</td></tr>
               )}
             </tbody>
           </table>
         </div>
-        {cargando && <div style={{ padding: 20, color: 'var(--muted)' }}>Cargando…</div>}
+        {cargando && <div role="status" style={{ padding: 20, color: 'var(--muted)' }}>Cargando…</div>}
       </div>
     </div>
   );
