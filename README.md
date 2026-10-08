@@ -412,6 +412,18 @@ En el backend, cada endpoint nuevo se protege así:
 | GET | `/api/membresias?estado=` | Dueño, recepción | Membresía actual de cada cliente; `estado=por_vencer` o `vencida` |
 | POST | `/api/membresias` | Dueño, recepción | Registrar pago de un plan. Si el cliente renueva antes de vencer, el plan nuevo empieza al terminar el actual (no pierde días) |
 | GET | `/api/membresias/mia` | Cliente | Su plan, vencimiento y días restantes (`null` si aún no paga) |
+| POST | `/api/clientes/{id}/lesiones` | Dueño, entrenador | Registrar lesión o limitación |
+| GET | `/api/clientes/{id}/lesiones?solo_vigentes=true` | Dueño, entrenador | Lesiones activas del cliente (sin filtro: todas) |
+| GET | `/api/lesiones?solo_vigentes=true` | Dueño, entrenador | Vista consolidada de lesiones activas |
+| PATCH | `/api/lesiones/{id}` | Dueño, entrenador | Actualizar datos o estado |
+| GET | `/api/lesiones/{id}/historial` | Dueño, entrenador | Historial del alta y cada modificación real |
+
+REQ-03 usa `lesiones` para el estado actual e `historial_lesion` para las versiones,
+con fecha UTC y usuario responsable. Ambas se guardan en una misma transacción;
+una edición sin cambios no agrega eventos ni altera la fecha. Las tablas faltantes
+se crean al iniciar con `create_all`, sin resetear la base de datos.
+La ficha del cliente incluye la pestaña Lesiones y la vista consolidada consume datos reales;
+las mediciones siguen usando datos de ejemplo. No se ajustan rutinas ni se asignan entrenadores.
 
 ## Seguridad incluida
 
