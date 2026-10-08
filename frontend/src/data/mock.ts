@@ -143,14 +143,6 @@ export const payments = [
   { id: 6, date: '10 sep 2026', client: 'Bruno Salazar', plan: 'Mensual', amount: 150, method: 'Tarjeta', status: 'paid' },
 ];
 
-export const attendance = [
-  { id: 1, client: 'Daniela Vargas', time: '07:02', method: 'QR', date: '17 sep 2026' },
-  { id: 2, client: 'Fátima Delgado', time: '07:45', method: 'QR', date: '17 sep 2026' },
-  { id: 3, client: 'Emerson Choque', time: '08:10', method: 'Manual', date: '17 sep 2026' },
-  { id: 4, client: 'Valeria Prado', time: '09:30', method: 'QR', date: '17 sep 2026' },
-  { id: 5, client: 'Bruno Salazar', time: '18:00', method: 'Manual', date: '17 sep 2026' },
-];
-
 export const injuries = [
   { id: 1, client: 'Daniela Vargas', injury: 'Lesión rodilla derecha', date: '02 sep 2026', routineAdjusted: true, trainer: 'Rosa Lima' },
   { id: 2, client: 'Bruno Salazar', injury: 'Dolor zona lumbar', date: '05 sep 2026', routineAdjusted: false, trainer: 'Javier Torres' },
@@ -168,7 +160,6 @@ export const revenueData = [
 export const kpis = {
   activeClients: 5,
   activeMembers: 4,
-  todayAttendance: 5,
   activeTrainers: 3,
 };
 

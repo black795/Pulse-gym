@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import Avatar from '../../components/Avatar';
+import AsistenciasCliente from '../../features/asistencias/AsistenciasCliente';
 import LesionesCliente from '../../features/lesiones/LesionesCliente';
 import { IconChevronRight } from '../../components/Icons';
 import { useAuth } from '../../features/auth/AuthContext';
@@ -14,7 +15,8 @@ export default function ClientProfile() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const puedeLesiones = tienePermiso(usuario, PERMISOS.LESIONES_GESTIONAR);
-  const tabs = puedeLesiones ? [...TABS, 'Lesiones'] : TABS;
+  const puedeAsistencia = tienePermiso(usuario, PERMISOS.ASISTENCIA_VER);
+  const tabs = [...TABS, ...(puedeLesiones ? ['Lesiones'] : []), ...(puedeAsistencia ? ['Asistencia'] : [])];
   const [client, setClient] = useState<Cliente | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState(0);
@@ -90,7 +92,10 @@ export default function ClientProfile() {
       </div>
 
       {/* Tab content */}
-      {tab === 0 ? <TabPersonal client={client} /> : tab === TABS.length && puedeLesiones ? <LesionesCliente key={client.id} clienteId={client.id} /> : <TabPendiente nombre={tabs[tab] ?? 'Pestaña'} />}
+      {tab === 0 ? <TabPersonal client={client} />
+        : tabs[tab] === 'Lesiones' ? <LesionesCliente key={client.id} clienteId={client.id} />
+        : tabs[tab] === 'Asistencia' ? <AsistenciasCliente key={client.id} clienteId={client.id} />
+        : <TabPendiente nombre={tabs[tab] ?? 'Pestaña'} />}
     </div>
   );
 }

@@ -1,6 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuth } from '../../features/auth/AuthContext';
 import { primerNombre } from '../../features/auth/permisos';
+import { asistenciasApi } from '../../features/asistencias/asistenciasApi';
 import { kpis, recentActivity, alerts } from '../../data/mock';
 import { IconUsers, IconCard, IconCheck, IconDumbbell, IconAlertTriangle, IconPlus, IconTrendingUp } from '../../components/Icons';
 
@@ -32,6 +34,12 @@ const activityIcon = (type: string) => {
 export default function Dashboard() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
+  const [asistenciasHoy, setAsistenciasHoy] = useState<number | null>(null);
+
+  useEffect(() => {
+    // Único indicador conectado por ahora; si falla, se muestra "—" y el resto del panel sigue igual.
+    asistenciasApi.resumen().then(r => setAsistenciasHoy(r.asistencias_hoy)).catch(() => setAsistenciasHoy(null));
+  }, []);
   const today = new Intl.DateTimeFormat('es-BO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date('2026-09-17'));
 
   return (
@@ -58,7 +66,7 @@ export default function Dashboard() {
           <div style={{ fontFamily: 'var(--font-sora)', color: '#fff', fontSize: 30, fontWeight: 800, lineHeight: 1.1 }}>
             Hola, {primerNombre(usuario)} 👋
           </div>
-          <div style={{ color: '#8fad99', marginTop: 8, fontSize: 14 }}>Todo en orden hoy. 5 asistencias registradas.</div>
+          <div style={{ color: '#8fad99', marginTop: 8, fontSize: 14 }}>{asistenciasHoy === null ? 'Todo en orden hoy.' : `Todo en orden hoy. ${asistenciasHoy} ${asistenciasHoy === 1 ? 'asistencia registrada' : 'asistencias registradas'}.`}</div>
         </div>
         {/* Neon accent */}
         <div style={{
@@ -95,7 +103,7 @@ export default function Dashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 28 }}>
         <KPICard label="Clientes activos" value={kpis.activeClients} icon={IconUsers} color="#16A34A" />
         <KPICard label="Membresías vigentes" value={kpis.activeMembers} icon={IconCard} color="#0891b2" />
-        <KPICard label="Asistencia hoy" value={kpis.todayAttendance} icon={IconCheck} color="#7c3aed" />
+        <KPICard label="Asistencia hoy" value={asistenciasHoy ?? '—'} icon={IconCheck} color="#7c3aed" />
         <KPICard label="Entrenadores activos" value={kpis.activeTrainers} icon={IconDumbbell} color="#d97706" />
       </div>
 
