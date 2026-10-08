@@ -1,5 +1,5 @@
 """Datos iniciales. Es seguro ejecutarlo muchas veces: solo crea lo que falta."""
-from datetime import timedelta
+from datetime import datetime, time, timedelta
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -7,10 +7,10 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.permisos import ADMINISTRADOR, CLIENTE, DESCRIPCION_ROL, ENTRENADOR, RECEPCIONISTA, TODOS_LOS_ROLES
 from app.core.tiempo import hoy as hoy_local
-from app.models import EstadoUsuario, Membresia, Plan, Rol, Sede, Usuario
+from app.models import Asistencia, EstadoUsuario, Membresia, Plan, Rol, Sede, Usuario
 from app.schemas.cliente import ClienteIn
 from app.schemas.membresia import MembresiaIn
-from app.services import cliente_service, membresia_service, usuario_service
+from app.services import asistencia_service, cliente_service, membresia_service, usuario_service
 
 PLANES = [("Mensual", 1, 150), ("Trimestral", 3, 400), ("Semestral", 6, 700)]
 
@@ -80,3 +80,15 @@ def sembrar_demo(db: Session) -> None:
                 cliente_id=cliente_service.buscar_por_carnet(db, carnet).id,
                 plan_id=db.scalar(select(Plan).where(Plan.nombre == plan)).id, fecha_pago=pago,
             ))
+
+    # Entradas de ejemplo con fechas relativas a hoy: un cliente activo, uno en riesgo y uno en abandono.
+    # Ninguna es de hoy, para que el check-in de la demo no choque con la regla de duplicados.
+    if db.query(Asistencia).count() == 0:
+        hoy = hoy_local()
+        visitas = [("7012345 LP", (12, 9, 6, 4, 2, 1)), ("7112345 LP", (25, 20)), ("7223456 CB", (45,))]
+        for carnet, dias_atras in visitas:
+            cliente = cliente_service.buscar_por_carnet(db, carnet)
+            for dias in dias_atras:  # 11:30 UTC = 07:30 en La Paz
+                asistencia_service.registrar(
+                    db, cliente.id, momento=datetime.combine(hoy - timedelta(days=dias), time(11, 30)),
+                )

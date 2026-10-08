@@ -109,7 +109,16 @@ def listar(
 def de_usuario(db: Session, usuario: Usuario) -> MembresiaOut | None:
     """La membresía actual del cliente que inició sesión (su ficha se une por el correo)."""
     cliente = db.scalar(select(Cliente).where(func.lower(Cliente.email) == usuario.email.lower()))
-    if cliente is None:
-        return None
-    historial = listar(db, cliente_id=cliente.id)  # ordenado por vencimiento: la última es la que cuenta
+    return actual_de_cliente(db, cliente.id) if cliente else None
+
+
+def estado_por_cliente(db: Session, hoy: date | None = None) -> dict[int, EstadoMembresia]:
+    """Estado de la membresía actual de cada cliente con al menos un pago (una sola consulta agregada)."""
+    hoy = hoy or hoy_local()
+    filas = db.execute(select(Membresia.cliente_id, func.max(Membresia.fecha_vencimiento)).group_by(Membresia.cliente_id))
+    return {cliente_id: calcular_estado(vencimiento, hoy) for cliente_id, vencimiento in filas}
+
+
+def actual_de_cliente(db: Session, cliente_id: int) -> MembresiaOut | None:
+    historial = listar(db, cliente_id=cliente_id)  # ordenado por vencimiento: la última es la que cuenta
     return historial[-1] if historial else None
