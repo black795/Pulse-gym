@@ -408,6 +408,10 @@ En el backend, cada endpoint nuevo se protege así:
 | GET | `/api/clientes/{id}` | Dueño, recepción, entrenador | Ficha de un cliente |
 | POST | `/api/clientes` | Dueño, recepción | Registrar ficha (el carnet no se puede repetir) |
 | PATCH | `/api/clientes/{id}` | Dueño, recepción | Editar ficha |
+| GET | `/api/planes` | Dueño, recepción | Planes con su duración y precio |
+| GET | `/api/membresias?estado=` | Dueño, recepción | Membresía actual de cada cliente; `estado=por_vencer` o `vencida` |
+| POST | `/api/membresias` | Dueño, recepción | Registrar pago de un plan. Si el cliente renueva antes de vencer, el plan nuevo empieza al terminar el actual (no pierde días) |
+| GET | `/api/membresias/mia` | Cliente | Su plan, vencimiento y días restantes (`null` si aún no paga) |
 | POST | `/api/clientes/{id}/lesiones` | Dueño, entrenador | Registrar lesión o limitación |
 | GET | `/api/clientes/{id}/lesiones?solo_vigentes=true` | Dueño, entrenador | Lesiones activas del cliente (sin filtro: todas) |
 | GET | `/api/lesiones?solo_vigentes=true` | Dueño, entrenador | Vista consolidada de lesiones activas |
