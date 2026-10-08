@@ -417,6 +417,11 @@ En el backend, cada endpoint nuevo se protege así:
 | GET | `/api/lesiones?solo_vigentes=true` | Dueño, entrenador | Vista consolidada de lesiones activas |
 | PATCH | `/api/lesiones/{id}` | Dueño, entrenador | Actualizar datos o estado |
 | GET | `/api/lesiones/{id}/historial` | Dueño, entrenador | Historial del alta y cada modificación real |
+| POST | `/api/asistencias` | Dueño, recepción | Check-in: registra la entrada del cliente con fecha y hora del sistema |
+| GET | `/api/asistencias?fecha=&cliente_id=` | Dueño, recepción, entrenador | Entradas de hoy (sin filtros), de otro día o historial de un cliente |
+| GET | `/api/asistencias/resumen` | Dueño, recepción, entrenador | Asistencias de hoy, hora pico y promedio diario de 7 días |
+| GET | `/api/asistencias/actividad?estado=` | Dueño, recepción, entrenador | Por cliente: última asistencia y si está `activo`, `en_riesgo`, `abandono` o `sin_asistencias` |
+| DELETE | `/api/asistencias/{id}` | Dueño, recepción | Anular una entrada registrada hoy por error |
 
 REQ-03 usa `lesiones` para el estado actual e `historial_lesion` para las versiones,
 con fecha UTC y usuario responsable. Ambas se guardan en una misma transacción;
@@ -424,6 +429,12 @@ una edición sin cambios no agrega eventos ni altera la fecha. Las tablas faltan
 se crean al iniciar con `create_all`, sin resetear la base de datos.
 La ficha del cliente incluye la pestaña Lesiones y la vista consolidada consume datos reales;
 las mediciones siguen usando datos de ejemplo. No se ajustan rutinas ni se asignan entrenadores.
+
+REQ-49 guarda cada entrada en `asistencias` (una fila por sesión) con el instante en UTC y el día
+según la zona del gimnasio. Reglas: un segundo check-in del mismo cliente antes de 60 minutos se
+rechaza como duplicado; la membresía vencida **no** bloquea la entrada, solo se avisa a recepción;
+una entrada solo se puede anular el mismo día. Actividad: `activo` si vino en los últimos 14 días,
+`en_riesgo` entre 15 y 30, `abandono` con más de 30 (constantes en `asistencia_service.py`).
 
 ## Seguridad incluida
 
@@ -438,7 +449,7 @@ las mediciones siguen usando datos de ejemplo. No se ajustan rutinas ni se asign
 
 ```bash
 cd backend
-pytest -q          # 50 pruebas: login, registro, permisos por rol, cambios de estado, ficha de cliente
+pytest -q          # login, registro, permisos por rol, clientes, membresías, lesiones y asistencia
 ```
 
 ## PostgreSQL (cuando lo necesites)

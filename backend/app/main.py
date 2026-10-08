@@ -4,7 +4,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.api.routes import auth, clientes, lesiones, membresias, roles, usuarios
+from app.api.routes import asistencias, auth, clientes, lesiones, membresias, roles, usuarios
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.seed import sembrar_catalogos, sembrar_demo
@@ -46,6 +46,7 @@ app.include_router(usuarios.router, prefix="/api")
 app.include_router(clientes.router, prefix="/api")
 app.include_router(membresias.router, prefix="/api")
 app.include_router(lesiones.router, prefix="/api")
+app.include_router(asistencias.router, prefix="/api")
 
 
 @app.get("/api/health", tags=["Sistema"])
