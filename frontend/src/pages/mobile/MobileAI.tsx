@@ -20,7 +20,7 @@ export default function MobileAI() {
   };
 
   return (
-    <div style={{ background: '#fff', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ background: '#fff', height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header */}
       <div style={{ background: 'var(--sidebar)', padding: '52px 16px 16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
