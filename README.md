@@ -274,8 +274,8 @@ feature/S1-04-maquinas
 # Pulse Gym
 
 Sistema de gestión de gimnasio. Hoy permite **iniciar sesión, registrarse y que cada rol vea solo lo que le corresponde.**
-El resto de pantallas ya están conectadas al login, pero todavía muestran datos de ejemplo
-(se irán conectando poco a poco).
+Clientes, Membresías, Lesiones y Asistencia ya trabajan con datos reales. El resto de pantallas están
+conectadas al login, pero todavía muestran datos de ejemplo (se irán conectando poco a poco).
 
 ## Qué incluye
 
@@ -342,13 +342,13 @@ pulse-gym/
 │   │   │   ├── permisos.py      ★ ROLES Y PERMISOS: la única fuente de verdad
 │   │   │   └── security.py      Contraseñas cifradas (bcrypt) y tokens (JWT)
 │   │   ├── db/                  Conexión a la base de datos y datos iniciales
-│   │   ├── models/              Tablas: sedes, roles, estados_usuario, usuarios, historial_estado_usuario, clientes
+│   │   ├── models/              Tablas: sedes, roles, estados_usuario, usuarios, historial_estado_usuario, clientes, planes, membresias, lesiones, historial_lesion, asistencias
 │   │   ├── schemas/             Qué datos entran y salen de la API (y sus validaciones)
 │   │   ├── services/            Reglas de negocio (crear usuario, cambiar estado…)
 │   │   └── api/
 │   │       ├── deps.py          "Porteros": ¿quién eres? ¿tienes la llave?
-│   │       └── routes/          Endpoints: auth, usuarios, roles, clientes
-│   └── tests/                   50 pruebas automáticas
+│   │       └── routes/          Endpoints: auth, usuarios, roles, clientes, membresias, lesiones, asistencias
+│   └── tests/                   Pruebas automáticas (un archivo por módulo)
 │
 └── frontend/                    ← Tu diseño (React + Vite + Tailwind)
     └── src/
@@ -418,9 +418,9 @@ En el backend, cada endpoint nuevo se protege así:
 | PATCH | `/api/lesiones/{id}` | Dueño, entrenador | Actualizar datos o estado |
 | GET | `/api/lesiones/{id}/historial` | Dueño, entrenador | Historial del alta y cada modificación real |
 | POST | `/api/asistencias` | Dueño, recepción | Check-in: registra la entrada del cliente con fecha y hora del sistema |
-| GET | `/api/asistencias?fecha=&cliente_id=` | Dueño, recepción, entrenador | Entradas de hoy (sin filtros), de otro día o historial de un cliente |
+| GET | `/api/asistencias?fecha=&cliente_id=&limite=` | Dueño, recepción, entrenador | Entradas de hoy (sin filtros), de otro día o historial de un cliente. `limite`: 200 por defecto, máximo 500 |
 | GET | `/api/asistencias/resumen` | Dueño, recepción, entrenador | Asistencias de hoy, hora pico y promedio diario de 7 días |
-| GET | `/api/asistencias/actividad?estado=` | Dueño, recepción, entrenador | Por cliente: última asistencia y si está `activo`, `en_riesgo`, `abandono` o `sin_asistencias` |
+| GET | `/api/asistencias/actividad?estado=` | Dueño, recepción, entrenador | Por cliente: última asistencia y si está `activo`, `en_riesgo`, `abandono` o `sin_asistencias`. El estado de la membresía solo se incluye para quien puede ver membresías |
 | DELETE | `/api/asistencias/{id}` | Dueño, recepción | Anular una entrada registrada hoy por error |
 
 REQ-03 usa `lesiones` para el estado actual e `historial_lesion` para las versiones,
@@ -432,7 +432,8 @@ las mediciones siguen usando datos de ejemplo. No se ajustan rutinas ni se asign
 
 REQ-49 guarda cada entrada en `asistencias` (una fila por sesión) con el instante en UTC y el día
 según la zona del gimnasio. Reglas: un segundo check-in del mismo cliente antes de 60 minutos se
-rechaza como duplicado; la membresía vencida **no** bloquea la entrada, solo se avisa a recepción;
+rechaza como duplicado (la comprobación y el guardado van bajo un bloqueo por cliente, así que dos
+check-in simultáneos tampoco se duplican); la membresía vencida **no** bloquea la entrada, solo se avisa a recepción;
 una entrada solo se puede anular el mismo día. Actividad: `activo` si vino en los últimos 14 días,
 `en_riesgo` entre 15 y 30, `abandono` con más de 30 (constantes en `asistencia_service.py`).
 

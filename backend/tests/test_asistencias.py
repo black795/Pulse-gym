@@ -311,3 +311,100 @@ def test_sin_sesion(client):
     for ruta in ("/api/asistencias", "/api/asistencias/resumen", "/api/asistencias/actividad"):
         assert client.get(ruta).status_code == 401
     assert client.delete("/api/asistencias/1").status_code == 401
+
+
+# ---- Correcciones tras la revisión del PR ----
+
+def test_check_in_simultaneos_del_mismo_cliente_solo_crean_una_entrada(client, entrar, cliente_id):
+    """Dos recepciones (o un reintento de red) a la vez: la regla de duplicados debe ser atómica."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    h = entrar(RECEPCION)
+    with ThreadPoolExecutor(max_workers=8) as hilos:
+        codigos = list(hilos.map(lambda _: checkin(client, h, cliente_id).status_code, range(8)))
+    assert sorted(codigos) == [201] + [409] * 7
+    assert len(client.get("/api/asistencias", headers=h, params={"cliente_id": cliente_id}).json()) == 1
+
+
+def test_limite_exacto_de_la_ventana_de_duplicados(client, cliente_id):
+    base = datetime(2026, 10, 8, 14, 0)
+    ventana = timedelta(minutes=svc.MINUTOS_ENTRE_CHECKINS)
+    with SessionLocal() as db:
+        svc.registrar(db, cliente_id, momento=base)
+        for dentro in (base + ventana - timedelta(seconds=1), base - ventana + timedelta(seconds=1)):
+            with pytest.raises(svc.ErrorNegocio) as error:
+                svc.registrar(db, cliente_id, momento=dentro)
+            assert error.value.status == 409
+        svc.registrar(db, cliente_id, momento=base + ventana)  # justo en el límite ya es otra sesión
+
+
+def test_si_el_reloj_retrocede_sigue_detectando_el_duplicado(client, entrar, cliente_id):
+    with SessionLocal() as db:
+        svc.registrar(db, cliente_id, momento=ahora() + timedelta(minutes=5))  # entrada "en el futuro"
+    assert checkin(client, entrar(RECEPCION), cliente_id).status_code == 409
+
+
+def test_una_entrada_anulada_no_presta_su_id_a_la_siguiente(client, entrar, cliente_id):
+    """Evita que una pantalla desactualizada anule por error la entrada nueva de otro cliente."""
+    h = entrar(RECEPCION)
+    primera = checkin(client, h, cliente_id).json()["id"]
+    client.delete(f"/api/asistencias/{primera}", headers=h)
+    assert checkin(client, h, cliente_id).json()["id"] != primera
+
+
+@pytest.mark.parametrize("cuerpo", [{"cliente_id": 0}, {"cliente_id": -3}, {"cliente_id": 10**30}])
+def test_ids_imposibles_se_rechazan_sin_error_del_servidor(client, entrar, cuerpo):
+    assert client.post("/api/asistencias", headers=entrar(RECEPCION), json=cuerpo).status_code == 422
+
+
+def test_limite_maximo_del_listado(client, entrar):
+    h = entrar(RECEPCION)
+    assert client.get("/api/asistencias", headers=h, params={"limite": svc.LIMITE_MAXIMO}).status_code == 200
+    assert client.get("/api/asistencias", headers=h, params={"limite": svc.LIMITE_MAXIMO + 1}).status_code == 422
+
+
+@pytest.mark.parametrize("dias, estado", [(14, "activo"), (15, "en_riesgo"), (30, "en_riesgo"), (31, "abandono")])
+def test_fronteras_de_actividad_con_fecha_fija(client, cliente_id, dias, estado):
+    hoy_fijo = date(2026, 10, 8)
+    with SessionLocal() as db:
+        svc.registrar(db, cliente_id, momento=datetime(2026, 10, 8, 15, 0) - timedelta(days=dias))
+        fila = next(f for f in svc.actividad(db, hoy=hoy_fijo) if f.cliente_id == cliente_id)
+    assert fila.dias_sin_asistir == dias and fila.estado == estado
+    assert fila.asistencias_30_dias == (1 if dias <= 29 else 0)  # la ventana de 30 días incluye hoy
+
+
+def test_quien_nunca_asistio_va_al_final_de_la_actividad(client, entrar, cliente_id):
+    filas = client.get("/api/asistencias/actividad", headers=entrar(RECEPCION)).json()
+    assert filas[-1]["cliente_id"] == cliente_id and filas[-1]["estado"] == "sin_asistencias"
+    assert all(f["dias_sin_asistir"] is not None for f in filas[:-1])
+
+
+def test_empate_de_hora_pico_gana_la_mas_temprana(client, cliente_id):
+    with SessionLocal() as db:
+        otro = Cliente(nombre="Otro", carnet="5550001 LP", fecha_nacimiento=date(1990, 1, 1), peso_kg=70, altura_cm=170)
+        db.add(otro)
+        db.commit()
+        svc.registrar(db, cliente_id, momento=datetime(2026, 3, 2, 22, 10))  # 18:10 en La Paz
+        svc.registrar(db, otro.id, momento=datetime(2026, 3, 2, 12, 10))     # 08:10 en La Paz
+        assert svc.resumen(db, hoy=date(2026, 3, 2)).hora_pico == "08:00–09:00"
+
+
+@pytest.mark.parametrize("estado, dias, texto", [
+    ("vencida", -1, "Membresía vencida ayer."), ("vencida", -15, "Membresía vencida hace 15 días."),
+    ("por_vencer", 0, "Su membresía vence hoy."), ("por_vencer", 1, "Su membresía vence mañana."),
+    ("por_vencer", 5, "Su membresía vence en 5 días."), ("vigente", 40, None),
+])
+def test_textos_del_aviso_de_membresia(estado, dias, texto):
+    from types import SimpleNamespace
+
+    assert svc.aviso_de_membresia(SimpleNamespace(estado=estado, dias_restantes=dias)) == texto
+    assert svc.aviso_de_membresia(None) == "Sin membresía registrada."
+
+
+def test_el_entrenador_no_recibe_el_estado_de_la_membresia(client, entrar):
+    """No tiene permiso de ver membresías, así que la actividad no se lo filtra por otro camino."""
+    para_entrenador = client.get("/api/asistencias/actividad", headers=entrar(ENTRENADOR)).json()
+    assert para_entrenador and all(f["membresia_estado"] is None for f in para_entrenador)
+    para_recepcion = client.get("/api/asistencias/actividad", headers=entrar(RECEPCION)).json()
+    assert any(f["membresia_estado"] is not None for f in para_recepcion)
+    assert [f["estado"] for f in para_entrenador] == [f["estado"] for f in para_recepcion]

@@ -11,6 +11,7 @@ import {
   type ActividadCliente, type Asistencia, type Checkin, type EstadoActividad, type ResumenAsistencia,
 } from '../../features/asistencias/asistenciasApi';
 import { ETIQUETA_ESTADO } from '../../features/membresias/membresiasApi';
+import { ApiError } from '../../lib/http';
 
 const MAX_SUGERENCIAS = 6;
 
@@ -24,113 +25,151 @@ const FILTROS: { valor: EstadoActividad | undefined; texto: string }[] = [
 
 const tarjeta = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' } as const;
 const celdaTitulo = { padding: '11px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em' } as const;
+const alerta = { color: 'var(--danger)', background: 'var(--danger-tint)', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13.5, fontWeight: 600, marginBottom: 18 } as const;
+const enlace = { background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'var(--font-sora)', fontWeight: 700, fontSize: 13.5, color: 'var(--ink)' } as const;
+
+/** Primero el carnet exacto, luego los que empiezan con el texto y al final los que solo lo contienen. */
+function buscarClientes(clientes: Cliente[], busqueda: string): Cliente[] {
+  const texto = busqueda.trim().toLowerCase();
+  if (!texto) return [];
+  const puntaje = (c: Cliente) => {
+    const nombre = c.nombre.toLowerCase();
+    const carnet = c.carnet.toLowerCase();
+    if (carnet === texto || nombre === texto) return 0;
+    if (carnet.startsWith(texto) || nombre.startsWith(texto)) return 1;
+    return carnet.includes(texto) || nombre.includes(texto) ? 2 : -1;
+  };
+  return clientes
+    .map(c => ({ c, p: puntaje(c) }))
+    .filter(x => x.p >= 0)
+    .sort((a, b) => a.p - b.p || a.c.nombre.localeCompare(b.c.nombre))
+    .slice(0, MAX_SUGERENCIAS)
+    .map(x => x.c);
+}
 
 export default function Attendance() {
   const navigate = useNavigate();
   const { usuario } = useAuth();
   const puedeRegistrar = tienePermiso(usuario, PERMISOS.ASISTENCIA_GESTIONAR);
+  const veMembresias = tienePermiso(usuario, PERMISOS.MEMBRESIAS_VER);
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [entradas, setEntradas] = useState<Asistencia[]>([]);
   const [resumen, setResumen] = useState<ResumenAsistencia | null>(null);
   const [actividad, setActividad] = useState<ActividadCliente[]>([]);
   const [filtro, setFiltro] = useState<EstadoActividad | undefined>(undefined);
-  const [cargando, setCargando] = useState(true);
+  const [cargandoDia, setCargandoDia] = useState(true);
   const [cargandoActividad, setCargandoActividad] = useState(true);
-  const [errorCarga, setErrorCarga] = useState<string | null>(null);
+  // Un error por bloque: que cargue uno no debe ocultar que falló otro.
+  const [errorDia, setErrorDia] = useState<string | null>(null);
+  const [errorActividad, setErrorActividad] = useState<string | null>(null);
+  const [errorClientes, setErrorClientes] = useState<string | null>(null);
 
   // Check-in
   const [busqueda, setBusqueda] = useState('');
   const [resaltado, setResaltado] = useState(0);
-  const [listaAbierta, setListaAbierta] = useState(false); // se cierra tras cada intento para no tapar el mensaje
+  const [listaAbierta, setListaAbierta] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [ultimo, setUltimo] = useState<Checkin | null>(null);
   const [errorCheckin, setErrorCheckin] = useState<string | null>(null);
+  const [porAnular, setPorAnular] = useState<number | null>(null); // fila que espera confirmación
   const campo = useRef<HTMLInputElement>(null);
 
+  // Si dos recargas se cruzan, solo cuenta la última de cada bloque (las viejas se descartan).
+  const peticionDia = useRef(0);
+  const peticionActividad = useRef(0);
+
   const cargarDia = async () => {
+    const numero = ++peticionDia.current;
     try {
       const [lista, datos] = await Promise.all([asistenciasApi.deHoy(), asistenciasApi.resumen()]);
+      if (numero !== peticionDia.current) return;
       setEntradas(lista);
       setResumen(datos);
-      setErrorCarga(null);
+      setErrorDia(null);
     } catch (err) {
-      setErrorCarga((err as Error).message);
+      if (numero === peticionDia.current) setErrorDia((err as Error).message);
     } finally {
-      setCargando(false);
+      if (numero === peticionDia.current) setCargandoDia(false);
     }
   };
 
-  // Si cambia de filtro rápido, solo cuenta la última petición (las viejas se descartan).
-  const ultimaPeticion = useRef(0);
-  const cargarActividad = async (estado: EstadoActividad | undefined) => {
-    const numero = ++ultimaPeticion.current;
-    setCargandoActividad(true);
+  // La actividad se pide completa una vez y los filtros se aplican aquí: cambiar de filtro no va al servidor.
+  const cargarActividad = async () => {
+    const numero = ++peticionActividad.current;
     try {
-      const filas = await asistenciasApi.actividad(estado);
-      if (numero !== ultimaPeticion.current) return;
+      const filas = await asistenciasApi.actividad();
+      if (numero !== peticionActividad.current) return;
       setActividad(filas);
-      setErrorCarga(null);
+      setErrorActividad(null);
     } catch (err) {
-      if (numero !== ultimaPeticion.current) return;
-      setActividad([]);
-      setErrorCarga((err as Error).message);
+      if (numero === peticionActividad.current) setErrorActividad((err as Error).message);
     } finally {
-      if (numero === ultimaPeticion.current) setCargandoActividad(false);
+      if (numero === peticionActividad.current) setCargandoActividad(false);
     }
   };
+
+  const recargar = () => { void cargarDia(); void cargarActividad(); };
 
   useEffect(() => {
-    void cargarDia();
-    if (puedeRegistrar) clientesApi.listar().then(setClientes).catch(err => setErrorCarga((err as Error).message));
+    recargar();
+    if (puedeRegistrar) {
+      clientesApi.listar().then(setClientes).catch(err => setErrorClientes((err as Error).message));
+    }
   }, [puedeRegistrar]);
 
-  useEffect(() => { void cargarActividad(filtro); }, [filtro]);
+  const sugerencias = useMemo(() => buscarClientes(clientes, busqueda), [busqueda, clientes]);
+  const listaVisible = listaAbierta && sugerencias.length > 0;
+  const actividadVisible = useMemo(() => actividad.filter(f => !filtro || f.estado === filtro), [actividad, filtro]);
 
-  const sugerencias = useMemo(() => {
-    const texto = busqueda.trim().toLowerCase();
-    if (!texto) return [];
-    return clientes
-      .filter(c => c.nombre.toLowerCase().includes(texto) || c.carnet.toLowerCase().includes(texto))
-      .slice(0, MAX_SUGERENCIAS);
-  }, [busqueda, clientes]);
-
-  const registrar = async (cliente: Cliente | undefined) => {
+  const registrar = async (cliente: Cliente) => {
     if (guardando) return;
     setUltimo(null);
-    setListaAbierta(false);
-    if (!cliente) {
-      setErrorCheckin(busqueda.trim() ? 'Ningún cliente coincide con la búsqueda.' : 'Escribe el nombre o el carnet del cliente.');
-      return;
-    }
     setErrorCheckin(null);
+    setListaAbierta(false);
     setGuardando(true);
     try {
       setUltimo(await asistenciasApi.registrar(cliente.id));
       setBusqueda('');
-      await Promise.all([cargarDia(), cargarActividad(filtro)]);
     } catch (err) {
       setErrorCheckin((err as Error).message);
+      // "Ya registró su entrada": el mensaje ya nombra al cliente, así que el campo queda libre para el siguiente.
+      if (err instanceof ApiError && err.status === 409) setBusqueda('');
     } finally {
-      setGuardando(false);
-      campo.current?.focus(); // listo para el siguiente cliente
+      setGuardando(false); // el siguiente check-in no espera a que terminen las recargas
+      campo.current?.focus();
     }
+    recargar();
+  };
+
+  /** Enter o el botón: solo registra a alguien que se está viendo resaltado en la lista. */
+  const confirmar = () => {
+    if (guardando) return;
+    if (!busqueda.trim()) { setErrorCheckin('Escribe el nombre o el carnet del cliente.'); return; }
+    if (sugerencias.length === 0) {
+      setErrorCheckin(errorClientes ? 'No se pudo cargar la lista de clientes. Recarga la página.' : 'Ningún cliente coincide con la búsqueda.');
+      return;
+    }
+    if (!listaVisible) { setListaAbierta(true); setResaltado(0); setErrorCheckin(null); return; }
+    void registrar(sugerencias[resaltado] ?? sugerencias[0]);
   };
 
   const anular = async (entrada: Asistencia) => {
     setErrorCheckin(null);
+    setPorAnular(null);
     try {
       await asistenciasApi.anular(entrada.id);
-      if (ultimo?.id === entrada.id) setUltimo(null);
-      await Promise.all([cargarDia(), cargarActividad(filtro)]);
     } catch (err) {
       setErrorCheckin((err as Error).message);
     }
+    if (ultimo?.id === entrada.id) setUltimo(null);
+    recargar(); // también si falló: otra recepción pudo haberla anulado antes
+    campo.current?.focus();
   };
 
   const alTeclear = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') { e.preventDefault(); void registrar(sugerencias[resaltado]); }
-    else if (e.key === 'ArrowDown') { e.preventDefault(); setResaltado(i => Math.min(i + 1, sugerencias.length - 1)); }
+    if (e.key === 'Enter') { e.preventDefault(); confirmar(); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); setListaAbierta(true); setResaltado(i => Math.max(0, Math.min(i + 1, sugerencias.length - 1))); }
     else if (e.key === 'ArrowUp') { e.preventDefault(); setResaltado(i => Math.max(i - 1, 0)); }
     else if (e.key === 'Escape') { setBusqueda(''); setListaAbierta(false); }
   };
@@ -138,8 +177,10 @@ export default function Attendance() {
   const kpis = [
     { label: 'Asistencias hoy', value: resumen ? resumen.asistencias_hoy : '—' },
     { label: 'Hora pico de hoy', value: resumen?.hora_pico ?? '—' },
-    { label: 'Promedio diario (7 días)', value: resumen ? resumen.promedio_diario_7_dias : '—' },
+    { label: 'Promedio diario (7 días)', value: resumen ? resumen.promedio_diario_7_dias.toFixed(1) : '—' },
   ];
+  const columnasDia = ['CLIENTE', 'HORA', 'MÉTODO', 'REGISTRÓ', ...(puedeRegistrar ? ['ACCIÓN'] : [])];
+  const columnasActividad = ['CLIENTE', 'ÚLTIMA ASISTENCIA', 'VISITAS (30 DÍAS)', ...(veMembresias ? ['MEMBRESÍA'] : []), 'ACTIVIDAD'];
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
@@ -148,11 +189,7 @@ export default function Attendance() {
         <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4, marginBottom: 0 }}>Control de ingresos del día y actividad de los clientes</p>
       </div>
 
-      {errorCarga && (
-        <div role="alert" style={{ color: 'var(--danger)', background: 'var(--danger-tint)', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13.5, fontWeight: 600, marginBottom: 18 }}>
-          {errorCarga}
-        </div>
-      )}
+      {errorClientes && <div role="alert" style={alerta}>No se pudo cargar la lista de clientes: {errorClientes}</div>}
 
       {/* Check-in bar */}
       {puedeRegistrar && (
@@ -172,8 +209,10 @@ export default function Attendance() {
               placeholder="Nombre o carnet del cliente… (Enter para registrar)"
               aria-label="Buscar cliente para registrar entrada"
               role="combobox"
-              aria-expanded={listaAbierta && sugerencias.length > 0}
-              aria-controls="sugerencias-checkin"
+              aria-autocomplete="list"
+              aria-expanded={listaVisible}
+              aria-controls={listaVisible ? 'sugerencias-checkin' : undefined}
+              aria-activedescendant={listaVisible ? `sugerencia-${sugerencias[resaltado]?.id}` : undefined}
               autoComplete="off"
               style={{
                 width: '100%', height: 44, paddingLeft: 38, paddingRight: 12, boxSizing: 'border-box',
@@ -181,18 +220,19 @@ export default function Attendance() {
                 borderRadius: 9, color: '#d0e8d4', fontSize: 14, fontFamily: 'var(--font-manrope)', outline: 'none',
               }}
             />
-            {listaAbierta && sugerencias.length > 0 && (
-              <ul id="sugerencias-checkin" role="listbox" style={{
+            {listaVisible && (
+              <ul id="sugerencias-checkin" role="listbox" aria-label="Clientes que coinciden" style={{
                 listStyle: 'none', margin: '6px 0 0', padding: 4, position: 'absolute', left: 0, right: 0, zIndex: 10,
                 background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
               }}>
                 {sugerencias.map((c, i) => (
                   <li
                     key={c.id}
+                    id={`sugerencia-${c.id}`}
                     role="option"
                     aria-selected={i === resaltado}
                     onMouseEnter={() => setResaltado(i)}
-                    onMouseDown={e => { e.preventDefault(); void registrar(c); }}
+                    onMouseDown={e => { if (e.button !== 0) return; e.preventDefault(); void registrar(c); }}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderRadius: 7, cursor: 'pointer',
                       background: i === resaltado ? 'var(--primary-tint)' : 'transparent',
@@ -206,7 +246,7 @@ export default function Attendance() {
               </ul>
             )}
           </div>
-          <button onClick={() => void registrar(sugerencias[resaltado])} disabled={guardando} style={{
+          <button onClick={confirmar} disabled={guardando} style={{
             padding: '0 22px', height: 44, background: 'var(--neon)', border: 'none', borderRadius: 9,
             fontFamily: 'var(--font-sora)', fontWeight: 700, fontSize: 14, color: 'var(--sidebar)',
             cursor: guardando ? 'default' : 'pointer', opacity: guardando ? 0.6 : 1,
@@ -218,11 +258,7 @@ export default function Attendance() {
         </div>
       )}
 
-      {errorCheckin && (
-        <div role="alert" style={{ color: 'var(--danger)', background: 'var(--danger-tint)', border: '1px solid #fecaca', borderRadius: 10, padding: '12px 18px', fontSize: 14, fontWeight: 600, marginBottom: 18 }}>
-          {errorCheckin}
-        </div>
-      )}
+      {errorCheckin && <div role="alert" style={{ ...alerta, padding: '12px 18px', fontSize: 14 }}>{errorCheckin}</div>}
 
       {ultimo && (
         <div role="status" style={{
@@ -265,11 +301,12 @@ export default function Attendance() {
             Entradas de hoy{resumen ? ` — ${fechaLegible(resumen.fecha)}` : ''}
           </div>
         </div>
+        {errorDia && <div role="alert" style={{ ...alerta, margin: 16 }}>No se pudieron cargar las entradas de hoy: {errorDia}</div>}
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['CLIENTE', 'HORA', 'MÉTODO', 'REGISTRÓ', ...(puedeRegistrar ? [''] : [])].map(h => <th key={h} style={celdaTitulo}>{h}</th>)}
+                {columnasDia.map(h => <th key={h} scope="col" style={{ ...celdaTitulo, textAlign: h === 'ACCIÓN' ? 'right' : 'left' }}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -279,7 +316,7 @@ export default function Attendance() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <Avatar name={row.cliente_nombre} size={32} />
                       <div>
-                        <span onClick={() => navigate(`/admin/clients/${row.cliente_id}`)} style={{ fontFamily: 'var(--font-sora)', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>{row.cliente_nombre}</span>
+                        <button onClick={() => navigate(`/admin/clients/${row.cliente_id}`)} style={enlace}>{row.cliente_nombre}</button>
                         <div style={{ color: 'var(--muted)', fontSize: 12 }}>CI {row.cliente_carnet}</div>
                       </div>
                     </div>
@@ -298,17 +335,28 @@ export default function Attendance() {
                   </td>
                   <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: 13.5 }}>{row.registrado_por_nombre ?? '—'}</td>
                   {puedeRegistrar && (
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <button onClick={() => void anular(row)} aria-label={`Anular la entrada de ${row.cliente_nombre}`} style={{ padding: '5px 10px', background: '#f0f4f1', border: 'none', borderRadius: 7, cursor: 'pointer', color: 'var(--muted)', fontSize: 12, fontWeight: 600 }}>
-                        Anular
-                      </button>
+                    <td style={{ padding: '12px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {porAnular === row.id ? (
+                        <>
+                          <button onClick={() => void anular(row)} style={{ padding: '5px 10px', background: 'var(--danger)', border: 'none', borderRadius: 7, cursor: 'pointer', color: '#fff', fontSize: 12, fontWeight: 700, marginRight: 6 }}>
+                            Sí, anular
+                          </button>
+                          <button onClick={() => setPorAnular(null)} style={{ padding: '5px 10px', background: '#f0f4f1', border: 'none', borderRadius: 7, cursor: 'pointer', color: 'var(--muted)', fontSize: 12, fontWeight: 600 }}>
+                            No
+                          </button>
+                        </>
+                      ) : (
+                        <button onClick={() => setPorAnular(row.id)} aria-label={`Anular la entrada de ${row.cliente_nombre}`} style={{ padding: '5px 10px', background: '#f0f4f1', border: 'none', borderRadius: 7, cursor: 'pointer', color: 'var(--muted)', fontSize: 12, fontWeight: 600 }}>
+                          Anular
+                        </button>
+                      )}
                     </td>
                   )}
                 </tr>
               ))}
-              {(cargando || entradas.length === 0) && (
-                <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13.5 }}>
-                  {cargando ? 'Cargando…' : 'Todavía no hay entradas registradas hoy.'}
+              {(cargandoDia || (!errorDia && entradas.length === 0)) && (
+                <tr><td colSpan={columnasDia.length} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13.5 }}>
+                  {cargandoDia ? 'Cargando…' : 'Todavía no hay entradas registradas hoy.'}
                 </td></tr>
               )}
             </tbody>
@@ -334,18 +382,19 @@ export default function Attendance() {
             ))}
           </div>
         </div>
+        {errorActividad && <div role="alert" style={{ ...alerta, margin: 16 }}>No se pudo cargar la actividad: {errorActividad}</div>}
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 640 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                {['CLIENTE', 'ÚLTIMA ASISTENCIA', 'VISITAS (30 DÍAS)', 'MEMBRESÍA', 'ACTIVIDAD'].map(h => <th key={h} style={celdaTitulo}>{h}</th>)}
+                {columnasActividad.map(h => <th key={h} scope="col" style={celdaTitulo}>{h}</th>)}
               </tr>
             </thead>
             <tbody>
-              {actividad.map((row, i) => (
-                <tr key={row.cliente_id} style={{ borderBottom: i < actividad.length - 1 ? '1px solid var(--border)' : 'none' }}>
+              {actividadVisible.map((row, i) => (
+                <tr key={row.cliente_id} style={{ borderBottom: i < actividadVisible.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <td style={{ padding: '12px 16px' }}>
-                    <span onClick={() => navigate(`/admin/clients/${row.cliente_id}`)} style={{ fontFamily: 'var(--font-sora)', fontWeight: 700, fontSize: 13.5, cursor: 'pointer' }}>{row.cliente_nombre}</span>
+                    <button onClick={() => navigate(`/admin/clients/${row.cliente_id}`)} style={enlace}>{row.cliente_nombre}</button>
                     <div style={{ color: 'var(--muted)', fontSize: 12 }}>CI {row.cliente_carnet}</div>
                   </td>
                   <td style={{ padding: '12px 16px', fontSize: 13.5 }}>
@@ -353,12 +402,14 @@ export default function Attendance() {
                     {row.ultima_fecha && <div style={{ color: 'var(--muted)', fontSize: 12 }}>{fechaLegible(row.ultima_fecha)}</div>}
                   </td>
                   <td style={{ padding: '12px 16px', fontFamily: 'var(--font-sora)', fontWeight: 700, fontSize: 14 }}>{row.asistencias_30_dias}</td>
-                  <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: 13.5 }}>{row.membresia_estado ? ETIQUETA_ESTADO[row.membresia_estado] : 'Sin membresía'}</td>
+                  {veMembresias && (
+                    <td style={{ padding: '12px 16px', color: 'var(--muted)', fontSize: 13.5 }}>{row.membresia_estado ? ETIQUETA_ESTADO[row.membresia_estado] : 'Sin membresía'}</td>
+                  )}
                   <td style={{ padding: '12px 16px' }}><Badge variant={VARIANTE_ACTIVIDAD[row.estado]}>{ETIQUETA_ACTIVIDAD[row.estado]}</Badge></td>
                 </tr>
               ))}
-              {!cargandoActividad && !errorCarga && actividad.length === 0 && (
-                <tr><td colSpan={5} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13.5 }}>No hay clientes en este estado.</td></tr>
+              {!cargandoActividad && !errorActividad && actividadVisible.length === 0 && (
+                <tr><td colSpan={columnasActividad.length} style={{ padding: 24, textAlign: 'center', color: 'var(--muted)', fontSize: 13.5 }}>No hay clientes en este estado.</td></tr>
               )}
             </tbody>
           </table>

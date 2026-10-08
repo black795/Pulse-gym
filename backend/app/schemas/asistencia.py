@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.schemas.membresia import EstadoMembresia
 
@@ -14,7 +14,7 @@ class CheckinIn(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    cliente_id: int
+    cliente_id: int = Field(gt=0, le=2**31 - 1)
 
 
 class AsistenciaOut(BaseModel):
@@ -55,4 +55,4 @@ class ActividadClienteOut(BaseModel):
     dias_sin_asistir: int | None  # None = nunca asistió
     asistencias_30_dias: int
     estado: EstadoActividad
-    membresia_estado: EstadoMembresia | None
+    membresia_estado: EstadoMembresia | None  # None también si quien consulta no puede ver membresías

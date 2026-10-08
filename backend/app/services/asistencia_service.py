@@ -1,4 +1,5 @@
 """REQ-49 — Asistencia: check-in por sesión y, a partir de ahí, qué cliente está activo o abandonó."""
+import threading
 from collections import Counter
 from datetime import date, datetime, timedelta
 
@@ -12,7 +13,7 @@ from app.schemas.asistencia import (
     ActividadClienteOut, AsistenciaOut, CheckinOut, EstadoActividad, MetodoAsistencia, ResumenAsistenciaOut,
 )
 from app.schemas.membresia import MembresiaOut
-from app.services import cliente_service, membresia_service
+from app.services import membresia_service
 from app.services.errores import ErrorNegocio
 
 MINUTOS_ENTRE_CHECKINS = 60  # un segundo check-in antes de este tiempo se toma como duplicado
@@ -20,6 +21,11 @@ DIAS_ACTIVO = 14             # asistió en los últimos 14 días → activo
 DIAS_ABANDONO = 30           # más de 30 días sin venir → abandono (entre ambos: en riesgo)
 DIAS_FRECUENCIA = 30         # ventana para contar "asistencias recientes"
 LIMITE_MAXIMO = 500
+
+# "Comprobar que no hay duplicado" y "guardar" deben ser un solo paso: sin esto, dos check-in
+# simultáneos del mismo cliente pasan ambos la comprobación. El candado cubre a SQLite (un proceso);
+# en PostgreSQL, con varios procesos, lo garantiza el bloqueo de la fila del cliente (FOR UPDATE).
+_candado_checkin = threading.Lock()
 
 
 def calcular_actividad(dias_sin_asistir: int | None) -> EstadoActividad:
@@ -52,28 +58,44 @@ def _a_out(a: Asistencia, cliente: Cliente, autor: Usuario | None) -> Asistencia
     )
 
 
+def _entrada_cercana(db: Session, cliente_id: int, momento: datetime) -> datetime | None:
+    """La entrada del cliente a menos de MINUTOS_ENTRE_CHECKINS de `momento`, antes o después."""
+    ventana = timedelta(minutes=MINUTOS_ENTRE_CHECKINS)
+    return db.scalar(
+        select(Asistencia.fecha_hora)
+        .where(Asistencia.cliente_id == cliente_id,
+               Asistencia.fecha_hora > momento - ventana, Asistencia.fecha_hora < momento + ventana)
+        .order_by(Asistencia.fecha_hora.desc()).limit(1)
+    )
+
+
 def registrar(
     db: Session, cliente_id: int, actor: Usuario | None = None, *,
     metodo: MetodoAsistencia = "manual", momento: datetime | None = None,
 ) -> CheckinOut:
     """Registra la entrada con la fecha y hora del sistema (`momento` solo lo usan los datos de ejemplo)."""
-    cliente = cliente_service.obtener(db, cliente_id)
-    momento = momento or ahora()
+    with _candado_checkin:
+        cliente = db.scalar(select(Cliente).where(Cliente.id == cliente_id).with_for_update())
+        if cliente is None:
+            db.rollback()
+            raise ErrorNegocio("Cliente no encontrado.", 404)
+        momento = momento or ahora()
 
-    ultima = db.scalar(select(func.max(Asistencia.fecha_hora)).where(Asistencia.cliente_id == cliente.id))
-    if ultima is not None and timedelta(0) <= momento - ultima < timedelta(minutes=MINUTOS_ENTRE_CHECKINS):
-        minutos = int((momento - ultima).total_seconds() // 60)
-        hace = "hace un momento" if minutos < 1 else f"hace {minutos} min"
-        raise ErrorNegocio(
-            f"{cliente.nombre} ya registró su entrada a las {a_local(ultima).strftime('%H:%M')} ({hace}).", 409,
+        cercana = _entrada_cercana(db, cliente.id, momento)
+        if cercana is not None:
+            db.rollback()  # suelta el bloqueo de la fila
+            minutos = int(abs((momento - cercana).total_seconds()) // 60)
+            hace = "hace un momento" if minutos < 1 else f"hace {minutos} min"
+            raise ErrorNegocio(
+                f"{cliente.nombre} ya registró su entrada a las {a_local(cercana).strftime('%H:%M')} ({hace}).", 409,
+            )
+
+        asistencia = Asistencia(
+            cliente_id=cliente.id, fecha_hora=momento, fecha=a_local(momento).date(), metodo=metodo,
+            registrado_por=actor.id if actor else None,
         )
-
-    asistencia = Asistencia(
-        cliente_id=cliente.id, fecha_hora=momento, fecha=a_local(momento).date(), metodo=metodo,
-        registrado_por=actor.id if actor else None,
-    )
-    db.add(asistencia)
-    db.commit()
+        db.add(asistencia)
+        db.commit()
     db.refresh(asistencia)
 
     membresia = membresia_service.actual_de_cliente(db, cliente.id)
@@ -98,7 +120,8 @@ def listar(
         .limit(min(limite, LIMITE_MAXIMO))
     )
     if cliente_id is not None:
-        cliente_service.obtener(db, cliente_id)
+        if db.get(Cliente, cliente_id) is None:
+            raise ErrorNegocio("Cliente no encontrado.", 404)
         consulta = consulta.where(Asistencia.cliente_id == cliente_id)
     if fecha is not None or cliente_id is None:
         consulta = consulta.where(Asistencia.fecha == (fecha or hoy_local()))
@@ -126,10 +149,11 @@ def resumen(db: Session, hoy: date | None = None) -> ResumenAsistenciaOut:
 
 
 def actividad(
-    db: Session, *, estado: EstadoActividad | None = None, hoy: date | None = None,
+    db: Session, *, estado: EstadoActividad | None = None, hoy: date | None = None, con_membresia: bool = True,
 ) -> list[ActividadClienteOut]:
     """Una fila por cliente (asista o no): cuándo vino por última vez y si está activo o abandonó.
-    Primero los que llevan más días sin venir; al final, los que nunca asistieron."""
+    Primero los que llevan más días sin venir; al final, los que nunca asistieron.
+    `con_membresia=False` omite el estado de la membresía (para quien no tiene permiso de verla)."""
     hoy = hoy or hoy_local()
     desde = hoy - timedelta(days=DIAS_FRECUENCIA - 1)
     filas = db.execute(
@@ -142,7 +166,7 @@ def actividad(
         .outerjoin(Asistencia, Asistencia.cliente_id == Cliente.id)
         .group_by(Cliente.id)
     ).all()
-    membresias = {m.cliente_id: m.estado for m in membresia_service.listar(db, hoy=hoy)}
+    membresias = membresia_service.estado_por_cliente(db, hoy) if con_membresia else {}
 
     salida = []
     for cliente, ultima, ultima_fecha, recientes in filas:

@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import requiere_permiso
-from app.core.permisos import ASISTENCIA_GESTIONAR, ASISTENCIA_VER
+from app.core.permisos import ASISTENCIA_GESTIONAR, ASISTENCIA_VER, MEMBRESIAS_VER, permisos_de
 from app.db.session import get_db
 from app.models import Usuario
 from app.schemas.asistencia import (
@@ -39,9 +39,11 @@ def resumen(db: Session = Depends(get_db), _: Usuario = puede_ver):
 
 
 @router.get("/actividad", response_model=list[ActividadClienteOut])
-def actividad(estado: EstadoActividad | None = None, db: Session = Depends(get_db), _: Usuario = puede_ver):
-    """Cliente activo o en abandono según su última asistencia."""
-    return svc.actividad(db, estado=estado)
+def actividad(estado: EstadoActividad | None = None, db: Session = Depends(get_db), usuario: Usuario = puede_ver):
+    """Cliente activo o en abandono según su última asistencia.
+    El estado de la membresía solo se incluye para quien puede ver membresías."""
+    ve_membresias = MEMBRESIAS_VER in permisos_de(usuario.rol.nombre)
+    return svc.actividad(db, estado=estado, con_membresia=ve_membresias)
 
 
 @router.delete("/{asistencia_id}", status_code=status.HTTP_204_NO_CONTENT)
