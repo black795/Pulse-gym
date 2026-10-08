@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import Avatar from '../../components/Avatar';
+import LesionesCliente from '../../features/lesiones/LesionesCliente';
 import { IconChevronRight } from '../../components/Icons';
 import { useAuth } from '../../features/auth/AuthContext';
 import { PERMISOS, tienePermiso } from '../../features/auth/permisos';
@@ -12,6 +13,8 @@ export default function ClientProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { usuario } = useAuth();
+  const puedeLesiones = tienePermiso(usuario, PERMISOS.LESIONES_GESTIONAR);
+  const tabs = puedeLesiones ? [...TABS, 'Lesiones'] : TABS;
   const [client, setClient] = useState<Cliente | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState(0);
@@ -73,7 +76,7 @@ export default function ClientProfile() {
         background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12,
         padding: 6, width: 'fit-content', maxWidth: '100%',
       }}>
-        {TABS.map((t, i) => (
+        {tabs.map((t, i) => (
           <button key={t} onClick={() => setTab(i)} style={{
             padding: '8px 16px', borderRadius: 8, border: 'none', cursor: 'pointer',
             fontFamily: 'var(--font-sora)', fontWeight: 700, fontSize: 13,
@@ -87,7 +90,7 @@ export default function ClientProfile() {
       </div>
 
       {/* Tab content */}
-      {tab === 0 ? <TabPersonal client={client} /> : <TabPendiente nombre={TABS[tab]} />}
+      {tab === 0 ? <TabPersonal client={client} /> : tab === TABS.length && puedeLesiones ? <LesionesCliente key={client.id} clienteId={client.id} /> : <TabPendiente nombre={tabs[tab] ?? 'Pestaña'} />}
     </div>
   );
 }
