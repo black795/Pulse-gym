@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { IconBell, IconChevronDown, IconSearch, IconX } from './Icons';
+import { IconBell, IconChevronDown, IconMenu, IconSearch, IconX } from './Icons';
 import { useAuth } from '../features/auth/AuthContext';
 import { ROLES_UI, primerNombre } from '../features/auth/permisos';
 
-export default function Topbar() {
+export default function Topbar({ menuLateralAbierto, alAbrirMenu }: { menuLateralAbierto: boolean; alAbrirMenu: () => void }) {
   const { usuario, logout } = useAuth();
   const [search, setSearch] = useState('');
   const [menuAbierto, setMenuAbierto] = useState(false);
@@ -28,11 +28,14 @@ export default function Topbar() {
   const nombre = primerNombre(usuario);
 
   return (
-    <header style={{
+    <header className="admin-topbar" style={{
       height: 60, background: 'var(--sidebar)', borderBottom: '1px solid rgba(255,255,255,0.07)',
-      display: 'flex', alignItems: 'center', paddingInline: 24, gap: 16, position: 'sticky', top: 0, zIndex: 50,
+      display: 'flex', alignItems: 'center', gap: 16, position: 'sticky', top: 0, zIndex: 50,
     }}>
-      <div style={{ flex: 1, maxWidth: 400, position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <button className="solo-movil" onClick={alAbrirMenu} aria-label="Abrir menú" aria-expanded={menuLateralAbierto} aria-controls="menu-lateral" style={{ background: 'none', border: 'none', color: '#b3c8bb', cursor: 'pointer', padding: 6, flexShrink: 0 }}>
+        <IconMenu style={{ width: 22, height: 22 }} />
+      </button>
+      <div className="topbar-busqueda" style={{ flex: 1, maxWidth: 400, position: 'relative', display: 'flex', alignItems: 'center' }}>
         <IconSearch style={{ position: 'absolute', left: 12, color: '#4d7a5e', width: 16, height: 16 }} />
         <input
           value={search}
@@ -66,13 +69,13 @@ export default function Topbar() {
             }}>
               {nombre.charAt(0).toUpperCase()}
             </div>
-            <span style={{ color: '#b3c8bb', fontSize: 13.5, fontFamily: 'var(--font-sora)', fontWeight: 600 }}>{nombre}</span>
+            <span className="topbar-nombre" style={{ color: '#b3c8bb', fontSize: 13.5, fontFamily: 'var(--font-sora)', fontWeight: 600 }}>{nombre}</span>
             <IconChevronDown style={{ color: '#4d7a5e', width: 15, height: 15, transform: menuAbierto ? 'rotate(180deg)' : 'none', transition: 'transform .15s' }} />
           </button>
 
           {menuAbierto && (
             <div role="menu" style={{
-              position: 'absolute', right: 0, top: 46, width: 240, background: 'var(--surface)', borderRadius: 12,
+              position: 'absolute', right: 0, top: 46, width: 240, maxWidth: 'calc(100vw - 24px)', background: 'var(--surface)', borderRadius: 12,
               border: '1px solid var(--border)', boxShadow: '0 12px 32px rgba(10,18,13,0.18)', overflow: 'hidden',
             }}>
               <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>

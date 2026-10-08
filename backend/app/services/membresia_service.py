@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from app.core.tiempo import hoy as hoy_local
 from app.models import Cliente, Membresia, Plan, Usuario
 from app.schemas.membresia import EstadoMembresia, MembresiaIn, MembresiaOut
+from app.services import cliente_service
 from app.services.errores import ErrorNegocio
 
 DIAS_AVISO = 7  # "próximo a vencer" = vence dentro de los próximos 7 días (incluye hoy)
@@ -108,7 +109,7 @@ def listar(
 
 def de_usuario(db: Session, usuario: Usuario) -> MembresiaOut | None:
     """La membresía actual del cliente que inició sesión (su ficha se une por el correo)."""
-    cliente = db.scalar(select(Cliente).where(func.lower(Cliente.email) == usuario.email.lower()))
+    cliente = cliente_service.de_usuario(db, usuario)
     return actual_de_cliente(db, cliente.id) if cliente else None
 
 

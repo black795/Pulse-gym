@@ -408,3 +408,16 @@ def test_el_entrenador_no_recibe_el_estado_de_la_membresia(client, entrar):
     para_recepcion = client.get("/api/asistencias/actividad", headers=entrar(RECEPCION)).json()
     assert any(f["membresia_estado"] is not None for f in para_recepcion)
     assert [f["estado"] for f in para_entrenador] == [f["estado"] for f in para_recepcion]
+
+
+def test_anular_deja_rastro_de_quien_y_cuando(client, entrar, cliente_id):
+    h = entrar(RECEPCION)
+    actor = client.get("/api/auth/me", headers=h).json()
+    a = checkin(client, h, cliente_id).json()
+    assert client.delete(f"/api/asistencias/{a['id']}", headers=h).status_code == 204
+    with SessionLocal() as db:
+        fila = db.get(Asistencia, a["id"])
+    assert fila is not None and fila.anulada_por == actor["id"] and fila.anulada_at is not None
+    resumen = client.get("/api/asistencias/resumen", headers=h).json()
+    assert resumen["asistencias_hoy"] == 0 and resumen["hora_pico"] is None
+    assert client.get("/api/asistencias", headers=h).json() == []

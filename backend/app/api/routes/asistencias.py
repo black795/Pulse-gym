@@ -47,5 +47,5 @@ def actividad(estado: EstadoActividad | None = None, db: Session = Depends(get_d
 
 
 @router.delete("/{asistencia_id}", status_code=status.HTTP_204_NO_CONTENT)
-def anular(asistencia_id: int, db: Session = Depends(get_db), _: Usuario = puede_gestionar):
-    svc.anular(db, asistencia_id)
+def anular(asistencia_id: int, db: Session = Depends(get_db), actor: Usuario = puede_gestionar):
+    svc.anular(db, asistencia_id, actor)

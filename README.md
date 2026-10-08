@@ -421,7 +421,9 @@ En el backend, cada endpoint nuevo se protege así:
 | GET | `/api/asistencias?fecha=&cliente_id=&limite=` | Dueño, recepción, entrenador | Entradas de hoy (sin filtros), de otro día o historial de un cliente. `limite`: 200 por defecto, máximo 500 |
 | GET | `/api/asistencias/resumen` | Dueño, recepción, entrenador | Asistencias de hoy, hora pico y promedio diario de 7 días |
 | GET | `/api/asistencias/actividad?estado=` | Dueño, recepción, entrenador | Por cliente: última asistencia y si está `activo`, `en_riesgo`, `abandono` o `sin_asistencias`. El estado de la membresía solo se incluye para quien puede ver membresías |
-| DELETE | `/api/asistencias/{id}` | Dueño, recepción | Anular una entrada registrada hoy por error |
+| DELETE | `/api/asistencias/{id}` | Dueño, recepción | Anular una entrada registrada hoy por error (queda guardado quién la anuló y cuándo) |
+| GET | `/api/mi-cuenta` | Cliente | App móvil: su ficha, membresía, lesiones activas, semana de asistencia, racha y visitas del mes |
+| GET | `/api/dashboard` | Dueño, recepción, entrenador | Indicadores, alertas y actividad reciente; solo incluye lo que el rol puede ver |
 
 REQ-03 usa `lesiones` para el estado actual e `historial_lesion` para las versiones,
 con fecha UTC y usuario responsable. Ambas se guardan en una misma transacción;
@@ -434,7 +436,7 @@ REQ-49 guarda cada entrada en `asistencias` (una fila por sesión) con el instan
 según la zona del gimnasio. Reglas: un segundo check-in del mismo cliente antes de 60 minutos se
 rechaza como duplicado (la comprobación y el guardado van bajo un bloqueo por cliente, así que dos
 check-in simultáneos tampoco se duplican); la membresía vencida **no** bloquea la entrada, solo se avisa a recepción;
-una entrada solo se puede anular el mismo día. Actividad: `activo` si vino en los últimos 14 días,
+una entrada solo se puede anular el mismo día, y no se borra: se marca como anulada (`anulada_at`, `anulada_por`) y deja de contar. Actividad: `activo` si vino en los últimos 14 días,
 `en_riesgo` entre 15 y 30, `abandono` con más de 30 (constantes en `asistencia_service.py`).
 
 ## Seguridad incluida
@@ -445,6 +447,12 @@ una entrada solo se puede anular el mismo día. Actividad: `activo` si vino en l
 - El dueño no puede quitarse su propio rol ni desactivarse (evita quedarse fuera del sistema).
 - El registro público rechaza cualquier intento de enviar un `rol`.
 - En producción (`ENTORNO=produccion`) el servidor no arranca con una clave secreta débil ni con usuarios de prueba.
+
+## Pantallas en teléfono
+
+- **Panel del personal:** por debajo de 900 px el menú lateral se convierte en un cajón que se abre con el botón ☰ de la barra superior. Las tarjetas pasan a una columna y las tablas tienen su propio desplazamiento horizontal.
+- **App del cliente (`/mobile`):** Inicio, Progreso y Perfil muestran datos reales de `GET /api/mi-cuenta`. La cuenta se enlaza con la ficha del cliente por el **correo**: si recepción registra la ficha con el mismo correo, los datos aparecen solos. Sin ficha, la app lo dice en vez de mostrar datos de otra persona.
+- Rutina, Entrenador IA y Agregar máquina siguen siendo pantallas de ejemplo y lo indican con una franja "Vista de ejemplo".
 
 ## Pruebas
 

@@ -53,7 +53,7 @@ export default function Roles() {
     setOcupado(u.id);
     try {
       reemplazar(await usuariosApi.cambiarEstado(u.id, nuevo, nuevo === 'inactivo' ? 'Desactivado desde Roles y permisos' : 'Reactivado'));
-      setMensaje({ tipo: 'ok', texto: `${u.nombre} quedó ${nuevo}.` });
+      setMensaje({ tipo: 'ok', texto: `La cuenta de ${u.nombre} quedó ${nuevo === 'activo' ? 'activa' : 'inactiva'}.` });
     } catch (err) {
       setMensaje({ tipo: 'error', texto: (err as Error).message });
     } finally {
@@ -65,7 +65,7 @@ export default function Roles() {
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16 }}>
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16 }}>
         <div>
           <h1 style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 24, margin: 0 }}>Roles y permisos</h1>
           <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4, marginBottom: 0 }}>Gestión de accesos del equipo</p>
@@ -114,7 +114,7 @@ export default function Roles() {
           onCreado={u => {
             setEquipo(lista => [...lista, u]);
             setFormAbierto(false);
-            setMensaje({ tipo: 'ok', texto: `${u.nombre} fue agregado como ${ROLES_UI[u.rol].etiqueta}. Ya puede iniciar sesión.` });
+            setMensaje({ tipo: 'ok', texto: `Se agregó a ${u.nombre} con el rol ${ROLES_UI[u.rol].etiqueta}. Ya puede iniciar sesión.` });
           }}
         />
       )}

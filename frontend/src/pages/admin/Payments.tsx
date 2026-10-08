@@ -43,7 +43,7 @@ export default function Payments() {
       {/* Quick charge */}
       <div style={{ background: 'var(--sidebar)', borderRadius: 14, padding: '20px 24px', marginBottom: 24, boxShadow: '0 4px 16px rgba(0,0,0,0.14)' }}>
         <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 15, color: '#b3c8bb', marginBottom: 16 }}>Cobro rápido</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr auto auto auto', gap: 12, alignItems: 'end' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: 12, alignItems: 'end' }}>
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#4d7a5e', marginBottom: 6 }}>Cliente</label>
             <input
@@ -103,7 +103,7 @@ export default function Payments() {
       )}
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 16, marginBottom: 24 }}>
         <KPI label="Ingresos del mes" value={`Bs ${totalMonth.toLocaleString()}`} />
         <KPI label="Pagos hoy" value={log.filter(p => p.date === '17 sep 2026').length} />
         <KPI label="Pagos pendientes" value={log.filter(p => p.status === 'pending').length} danger />
@@ -111,7 +111,7 @@ export default function Payments() {
 
       {/* Table */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div className="tabla-scroll"><table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 620 }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>
               {['FECHA', 'CLIENTE', 'PLAN', 'MONTO', 'MÉTODO', 'ESTADO'].map(h => (
@@ -139,7 +139,7 @@ export default function Payments() {
               );
             })}
           </tbody>
-        </table>
+        </table></div>
       </div>
     </div>
   );

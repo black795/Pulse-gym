@@ -16,7 +16,7 @@ export default function MobileConfirm() {
 
   if (saved) {
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh', gap: 16, background: '#fff', padding: 24 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', minHeight: 360, gap: 16, background: '#fff', padding: 24 }}>
         <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--primary-tint)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28 }}>✓</div>
         <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 20, color: 'var(--ink)', textAlign: 'center' }}>Máquina guardada</div>
         <div style={{ color: 'var(--muted)', fontSize: 14 }}>Redirigiendo al inicio...</div>

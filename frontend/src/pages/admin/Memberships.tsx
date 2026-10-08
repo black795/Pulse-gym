@@ -140,7 +140,7 @@ export default function Memberships() {
               </ul>
               {puedeRegistrar && (
                 <button
-                  onClick={() => setPlanId(String(plan.id))}
+                  onClick={() => { setPlanId(String(plan.id)); setError(null); }}
                   style={{
                     padding: '10px', borderRadius: 9, border: 'none', cursor: 'pointer',
                     fontFamily: 'var(--font-sora)', fontWeight: 700, fontSize: 14,
@@ -161,14 +161,14 @@ export default function Memberships() {
         <form onSubmit={registrar} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '18px 20px', marginBottom: 24, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
           <label style={etiqueta}>
             CLIENTE
-            <select value={clienteId} onChange={e => setClienteId(e.target.value)} style={entrada}>
+            <select value={clienteId} onChange={e => { setClienteId(e.target.value); setError(null); }} style={entrada}>
               <option value="">Elegir…</option>
               {clientes.map(c => <option key={c.id} value={c.id}>{c.nombre} · {c.carnet}</option>)}
             </select>
           </label>
           <label style={etiqueta}>
             PLAN
-            <select value={planId} onChange={e => setPlanId(e.target.value)} style={entrada}>
+            <select value={planId} onChange={e => { setPlanId(e.target.value); setError(null); }} style={entrada}>
               <option value="">Elegir…</option>
               {planes.map(p => <option key={p.id} value={p.id}>{p.nombre} · Bs {p.precio}</option>)}
             </select>
@@ -200,7 +200,7 @@ export default function Memberships() {
           </div>
         </div>
         <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 560 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
                 {['CLIENTE', 'PLAN', 'PAGO', 'VENCIMIENTO', 'ESTADO'].map(h => (

@@ -285,7 +285,7 @@ export default function Attendance() {
       )}
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: 16, marginBottom: 24 }}>
         {kpis.map(k => (
           <div key={k.label} style={{ ...tarjeta, padding: '18px 20px' }}>
             <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 26, color: 'var(--ink)' }}>{k.value}</div>

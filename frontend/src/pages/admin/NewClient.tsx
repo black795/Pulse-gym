@@ -111,7 +111,7 @@ export default function NewClient() {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 320px', gap: 20 }}>
+      <div className="cols-form-lateral" style={{ gap: 20 }}>
         <form onSubmit={handleSave} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
           {error && (
             <div role="alert" style={{ color: 'var(--danger)', background: 'var(--danger-tint)', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', fontSize: 13.5, fontWeight: 600 }}>
@@ -121,7 +121,7 @@ export default function NewClient() {
 
           {/* Personal data */}
           <Section title="Datos personales">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 14 }}>
               <Field label="Nombre completo *" placeholder="Nombre y apellido" {...campo('nombre')} />
               <Field label="Carnet de identidad *" placeholder="1234567 LP" {...campo('carnet')} />
               <Field label="Teléfono" type="tel" placeholder="+591 7..." {...campo('telefono')} />
@@ -132,7 +132,7 @@ export default function NewClient() {
 
           {/* Physical */}
           <Section title="Datos físicos y objetivo">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 14 }}>
               <Field label="Peso (kg) *" type="number" placeholder="65" {...campo('peso_kg')} />
               <Field label="Altura (cm) *" type="number" placeholder="170" {...campo('altura_cm')} />
             </div>

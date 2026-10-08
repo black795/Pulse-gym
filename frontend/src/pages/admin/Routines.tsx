@@ -68,7 +68,7 @@ export default function Routines() {
           </div>
 
           {/* Day tabs */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
             {days.map((d, i) => (
               <button key={d} onClick={() => setDay(i)} style={{
                 padding: '8px 18px', borderRadius: 9, cursor: 'pointer',
@@ -88,7 +88,7 @@ export default function Routines() {
                 background: 'var(--surface)', border: `1px solid ${ex.available === false ? '#fecaca' : 'var(--border)'}`,
                 borderRadius: 14, padding: '18px 22px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
               }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
                   <div>
                     <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 15, color: 'var(--ink)' }}>{ex.name}</div>
                     <div style={{ fontSize: 13, color: 'var(--muted)', marginTop: 3 }}>
@@ -111,7 +111,7 @@ export default function Routines() {
                     <div style={{ fontFamily: 'var(--font-sora)', fontWeight: 800, fontSize: 12, background: 'var(--neon)', color: 'var(--sidebar)', padding: '3px 10px', borderRadius: 6, display: 'inline-block', marginBottom: 10 }}>
                       IA — Plan B automático del Entrenador IA
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 150px), 1fr))', gap: 10 }}>
                       {planBOptions.map(opt => (
                         <div key={opt.id} style={{
                           padding: '10px 14px', borderRadius: 10,
