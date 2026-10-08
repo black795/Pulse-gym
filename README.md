@@ -408,6 +408,9 @@ En el backend, cada endpoint nuevo se protege así:
 | GET | `/api/clientes/{id}` | Dueño, recepción, entrenador | Ficha de un cliente |
 | POST | `/api/clientes` | Dueño, recepción | Registrar ficha (el carnet no se puede repetir) |
 | PATCH | `/api/clientes/{id}` | Dueño, recepción | Editar ficha |
+| GET | `/api/planes` | Dueño, recepción | Planes con su duración y precio |
+| GET | `/api/membresias?estado=` | Dueño, recepción | Membresía actual de cada cliente; `estado=por_vencer` o `vencida` |
+| POST | `/api/membresias` | Dueño, recepción | Registrar pago de un plan (el vencimiento se calcula solo) |
 
 ## Seguridad incluida
 

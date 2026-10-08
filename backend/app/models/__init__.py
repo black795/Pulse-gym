@@ -2,8 +2,10 @@
 from app.models.cliente import Cliente
 from app.models.estado_usuario import EstadoUsuario
 from app.models.historial_estado_usuario import HistorialEstadoUsuario
+from app.models.membresia import Membresia
+from app.models.plan import Plan
 from app.models.rol import Rol
 from app.models.sede import Sede
 from app.models.usuario import Usuario
 
-__all__ = ["Cliente", "EstadoUsuario", "HistorialEstadoUsuario", "Rol", "Sede", "Usuario"]
+__all__ = ["Cliente", "EstadoUsuario", "HistorialEstadoUsuario", "Membresia", "Plan", "Rol", "Sede", "Usuario"]

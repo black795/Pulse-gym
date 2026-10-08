@@ -4,9 +4,14 @@ from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.core.permisos import ADMINISTRADOR, CLIENTE, DESCRIPCION_ROL, ENTRENADOR, RECEPCIONISTA, TODOS_LOS_ROLES
-from app.models import EstadoUsuario, Rol, Sede, Usuario
+from datetime import date, timedelta
+
+from app.models import EstadoUsuario, Membresia, Plan, Rol, Sede, Usuario
 from app.schemas.cliente import ClienteIn
-from app.services import cliente_service, usuario_service
+from app.schemas.membresia import MembresiaIn
+from app.services import cliente_service, membresia_service, usuario_service
+
+PLANES = [("Mensual", 1, 150), ("Trimestral", 3, 400), ("Semestral", 6, 700)]
 
 ESTADOS = [("activo", True), ("inactivo", False), ("suspendido", False)]
 
@@ -38,6 +43,9 @@ def sembrar_catalogos(db: Session) -> None:
     for nombre, permite in ESTADOS:
         if db.scalar(select(EstadoUsuario).where(EstadoUsuario.nombre == nombre)) is None:
             db.add(EstadoUsuario(nombre=nombre, permite_acceso=permite))
+    for nombre, meses, precio in PLANES:
+        if db.scalar(select(Plan).where(Plan.nombre == nombre)) is None:
+            db.add(Plan(nombre=nombre, duracion_meses=meses, precio=precio))
     db.commit()
 
 
@@ -59,3 +67,15 @@ def sembrar_demo(db: Session) -> None:
     for ficha in CLIENTES_DEMO:
         if cliente_service.buscar_por_carnet(db, ficha["carnet"]) is None:
             cliente_service.crear(db, ClienteIn(**ficha))
+
+    # Un pago por cliente con fechas relativas a hoy, para ver los tres estados (vigente, por vencer, vencida)
+    if db.query(Membresia).count() == 0:
+        hoy = date.today()
+        pagos = [("7012345 LP", "Trimestral", hoy - timedelta(days=10)),
+                 ("7112345 LP", "Mensual", hoy - timedelta(days=26)),
+                 ("7223456 CB", "Mensual", hoy - timedelta(days=45))]
+        for carnet, plan, pago in pagos:
+            membresia_service.registrar(db, MembresiaIn(
+                cliente_id=cliente_service.buscar_por_carnet(db, carnet).id,
+                plan_id=db.scalar(select(Plan).where(Plan.nombre == plan)).id, fecha_pago=pago,
+            ))
