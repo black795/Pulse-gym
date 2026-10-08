@@ -7,6 +7,7 @@ from app.services import usuario_service
 from app.services.errores import ErrorNegocio
 
 MENSAJE_CREDENCIALES = "Correo o contraseña incorrectos."
+ESTADO_EN_FEMENINO = {"activo": "activa", "inactivo": "inactiva", "suspendido": "suspendida"}  # "tu cuenta está…"
 
 
 def autenticar(db: Session, email: str, password: str) -> Usuario:
@@ -21,7 +22,8 @@ def autenticar(db: Session, email: str, password: str) -> Usuario:
     # Solo si la contraseña es correcta explicamos por qué no puede entrar.
     if not usuario.estado.permite_acceso:
         raise ErrorNegocio(
-            f"Tu cuenta está {usuario.estado.nombre}. Habla con el administrador del gimnasio.", 403
+            f"Tu cuenta está {ESTADO_EN_FEMENINO.get(usuario.estado.nombre, usuario.estado.nombre)}. "
+            "Habla con el administrador del gimnasio.", 403
         )
     return usuario
 

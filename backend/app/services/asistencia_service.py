@@ -22,6 +22,8 @@ DIAS_ABANDONO = 30           # más de 30 días sin venir → abandono (entre am
 DIAS_FRECUENCIA = 30         # ventana para contar "asistencias recientes"
 LIMITE_MAXIMO = 500
 
+VIGENTE = Asistencia.anulada_at.is_(None)  # las entradas anuladas no cuentan en ninguna consulta
+
 # "Comprobar que no hay duplicado" y "guardar" deben ser un solo paso: sin esto, dos check-in
 # simultáneos del mismo cliente pasan ambos la comprobación. El candado cubre a SQLite (un proceso);
 # en PostgreSQL, con varios procesos, lo garantiza el bloqueo de la fila del cliente (FOR UPDATE).
@@ -63,7 +65,7 @@ def _entrada_cercana(db: Session, cliente_id: int, momento: datetime) -> datetim
     ventana = timedelta(minutes=MINUTOS_ENTRE_CHECKINS)
     return db.scalar(
         select(Asistencia.fecha_hora)
-        .where(Asistencia.cliente_id == cliente_id,
+        .where(Asistencia.cliente_id == cliente_id, VIGENTE,
                Asistencia.fecha_hora > momento - ventana, Asistencia.fecha_hora < momento + ventana)
         .order_by(Asistencia.fecha_hora.desc()).limit(1)
     )
@@ -116,6 +118,7 @@ def listar(
         select(Asistencia, Cliente, Usuario)
         .join(Cliente, Cliente.id == Asistencia.cliente_id)
         .outerjoin(Usuario, Usuario.id == Asistencia.registrado_por)
+        .where(VIGENTE)
         .order_by(Asistencia.fecha_hora.desc(), Asistencia.id.desc())
         .limit(min(limite, LIMITE_MAXIMO))
     )
@@ -131,7 +134,7 @@ def listar(
 def resumen(db: Session, hoy: date | None = None) -> ResumenAsistenciaOut:
     hoy = hoy or hoy_local()
     de_hoy = db.execute(
-        select(Asistencia.fecha_hora, Asistencia.cliente_id).where(Asistencia.fecha == hoy)
+        select(Asistencia.fecha_hora, Asistencia.cliente_id).where(Asistencia.fecha == hoy, VIGENTE)
     ).all()
     por_hora = Counter(a_local(momento).hour for momento, _ in de_hoy)
     pico = None
@@ -140,7 +143,7 @@ def resumen(db: Session, hoy: date | None = None) -> ResumenAsistenciaOut:
         pico = f"{hora:02d}:00–{(hora + 1) % 24:02d}:00"
 
     semana = db.scalar(
-        select(func.count(Asistencia.id)).where(Asistencia.fecha.between(hoy - timedelta(days=6), hoy))
+        select(func.count(Asistencia.id)).where(Asistencia.fecha.between(hoy - timedelta(days=6), hoy), VIGENTE)
     ) or 0
     return ResumenAsistenciaOut(
         fecha=hoy, asistencias_hoy=len(de_hoy), clientes_hoy=len({cliente for _, cliente in de_hoy}),
@@ -163,7 +166,7 @@ def actividad(
             func.max(Asistencia.fecha),
             func.count(case((Asistencia.fecha >= desde, Asistencia.id))),
         )
-        .outerjoin(Asistencia, Asistencia.cliente_id == Cliente.id)
+        .outerjoin(Asistencia, (Asistencia.cliente_id == Cliente.id) & VIGENTE)
         .group_by(Cliente.id)
     ).all()
     membresias = membresia_service.estado_por_cliente(db, hoy) if con_membresia else {}
@@ -181,12 +184,28 @@ def actividad(
     return [f for f in salida if estado is None or f.estado == estado]
 
 
-def anular(db: Session, asistencia_id: int) -> None:
-    """Deshace un check-in hecho por error. Solo el mismo día: el historial no se reescribe."""
+def anular(db: Session, asistencia_id: int, actor: Usuario | None = None) -> None:
+    """Deshace un check-in hecho por error. Solo el mismo día, y queda registrado quién lo anuló."""
     asistencia = db.get(Asistencia, asistencia_id)
-    if asistencia is None:
+    if asistencia is None or asistencia.anulada_at is not None:
         raise ErrorNegocio("Entrada no encontrada.", 404)
     if asistencia.fecha != hoy_local():
         raise ErrorNegocio("Solo se puede anular una entrada registrada hoy.", 409)
-    db.delete(asistencia)
+    asistencia.anulada_at = ahora()
+    asistencia.anulada_por = actor.id if actor else None
     db.commit()
+
+
+def fechas_de_cliente(db: Session, cliente_id: int, desde: date) -> list[date]:
+    """Días (sin repetir, del más antiguo al más reciente) en que el cliente asistió desde `desde`."""
+    return list(db.scalars(
+        select(Asistencia.fecha).where(Asistencia.cliente_id == cliente_id, VIGENTE, Asistencia.fecha >= desde)
+        .distinct().order_by(Asistencia.fecha)
+    ))
+
+
+def contar_de_cliente(db: Session, cliente_id: int, desde: date, hasta: date) -> int:
+    return db.scalar(
+        select(func.count(Asistencia.id))
+        .where(Asistencia.cliente_id == cliente_id, VIGENTE, Asistencia.fecha.between(desde, hasta))
+    ) or 0

@@ -38,6 +38,11 @@ def buscar_por_carnet(db: Session, carnet: str) -> Cliente | None:
     return db.scalar(select(Cliente).where(Cliente.carnet == carnet))
 
 
+def de_usuario(db: Session, usuario: Usuario) -> Cliente | None:
+    """La ficha del cliente que inició sesión. Cuenta y ficha se unen por el correo."""
+    return db.scalar(select(Cliente).where(func.lower(Cliente.email) == usuario.email.lower()))
+
+
 def listar(db: Session, *, buscar: str | None = None) -> list[Cliente]:
     consulta = select(Cliente).order_by(Cliente.nombre, Cliente.id)
     if buscar and buscar.strip():

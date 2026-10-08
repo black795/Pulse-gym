@@ -75,7 +75,7 @@ def test_cuenta_inactiva_no_entra_pero_solo_se_le_dice_con_password_correcta(cli
     assert client.patch(f"/api/usuarios/{uid}/estado", headers=admin, json={"estado": "inactivo"}).status_code == 200
 
     ok = client.post("/api/auth/login", json={"email": "daniela@pulsegym.com", "password": PASSWORD})
-    assert ok.status_code == 403 and "inactivo" in ok.json()["detail"]
+    assert ok.status_code == 403 and "inactiva" in ok.json()["detail"]
     mala = client.post("/api/auth/login", json={"email": "daniela@pulsegym.com", "password": "incorrecta1"})
     assert mala.status_code == 401
 
